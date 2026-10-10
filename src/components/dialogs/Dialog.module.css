@@ -1,0 +1,87 @@
+.dialog {
+  padding: 0;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  background: var(--c-surface);
+  color: var(--c-text);
+  box-shadow: var(--shadow-lg);
+  width: min(100vw - 2 * var(--space-3), 560px);
+  max-width: none;
+  max-height: min(calc(100dvh - 2 * var(--space-3)), 900px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: rise var(--dur) var(--ease);
+}
+
+.dialog::backdrop {
+  background: rgb(16 22 18 / 0.45);
+}
+
+.wide {
+  width: min(100vw - 2 * var(--space-3), 720px);
+}
+
+@media (max-width: 599px) {
+  /* Bottom-sheet style on phones, respecting the gesture area. */
+  .dialog {
+    width: 100vw;
+    max-height: calc(100dvh - var(--safe-top) - var(--space-5));
+    margin: auto 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: none;
+  }
+  .wide {
+    width: 100vw;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--c-border);
+  flex: none;
+}
+
+.header h2 {
+  font-size: var(--text-lg);
+}
+
+.body {
+  padding: var(--space-5);
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  padding-bottom: calc(var(--space-3) + var(--safe-bottom));
+  border-top: 1px solid var(--c-border);
+  background: var(--c-surface);
+  flex: none;
+}
+
+@media (max-width: 420px) {
+  .footer > * {
+    flex: 1 1 auto;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
