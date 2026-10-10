@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import styles from './Toast.module.css';
-import { ToastContext, type ToastAction, type ToastApi } from './toastContext';
+import { pushToast, ToastContext, type ToastAction, type ToastApi } from './toastContext';
 
 
 interface ToastItem {
@@ -27,8 +27,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const show = useCallback<ToastApi['show']>(
     (message, options = {}) => {
       const id = nextId.current++;
-      // Keep at most 3 toasts so the region never grows unbounded.
-      setItems((list) => [...list.slice(-2), { id, message, tone: options.tone ?? 'default', action: options.action }]);
+      // Keep at most two visible; prefer keeping toasts that offer an action (e.g. Undo).
+      setItems((list) => pushToast(list, { id, message, tone: options.tone ?? 'default', action: options.action }));
       const duration = options.durationMs ?? (options.action ? 8000 : 4500);
       timers.current.set(
         id,
@@ -59,6 +59,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 className={styles.action}
+                // Visible text stays short ("Undo"); the accessible name says what it undoes,
+                // so several action toasts are never ambiguous for screen-reader users.
+                aria-label={`${t.action.label}: ${t.message}`}
                 onClick={() => {
                   t.action?.onClick();
                   dismiss(t.id);

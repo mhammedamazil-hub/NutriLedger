@@ -11,3 +11,6 @@ coverage
 *.log
 /test-results
 /scripts/.browser
+
+# Real-browser audit output (scripts/browser-audit.mjs)
+/audit-out

@@ -85,6 +85,9 @@
   max-width: var(--content-max);
   margin: 0 auto;
   display: grid;
+  /* minmax(0, 1fr): a wide child (e.g. a horizontally scrolling tab list)
+     must scroll inside itself instead of widening the whole page. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   min-width: 0;
 }

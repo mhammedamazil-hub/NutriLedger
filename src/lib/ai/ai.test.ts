@@ -23,7 +23,7 @@ function mockClient(impl: (params: unknown) => Promise<GenAiResponseLike>, get?:
   return { generateContent, get: getFn, loader };
 }
 
-const opts = { apiKey: 'test-key', model: 'gemini-3.5-flash', sleep: async () => undefined };
+const opts = { apiKey: 'test-key', model: 'gemini-3.8-flash', sleep: async () => undefined };
 
 const goodEstimate = {
   status: 'estimate',
@@ -171,7 +171,7 @@ describe('AI request controls', () => {
   it('tests the connection with a metadata lookup only', async () => {
     const { generateContent, get } = mockClient(async () => ({ text: 'x' }));
     await testConnection(opts);
-    expect(get).toHaveBeenCalledWith(expect.objectContaining({ model: 'gemini-3.5-flash' }));
+    expect(get).toHaveBeenCalledWith(expect.objectContaining({ model: 'gemini-3.8-flash' }));
     expect(generateContent).not.toHaveBeenCalled();
   });
 

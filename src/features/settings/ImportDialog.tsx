@@ -6,13 +6,16 @@ import { Notice } from '../../components/feedback/Notice';
 import { useDataStore } from '../../app/dataContext';
 import { preferencesStore } from '../../app/preferences';
 import type { BackupFile } from '../../lib/export/backup';
-import { planImport, type ConflictPolicy, type ImportMode } from '../../lib/import/backup';
+import { planImport, type ConflictPolicy, type ImportMode, type RejectedItem } from '../../lib/import/backup';
 import { formatInt, pluralize } from '../../lib/formatting/numbers';
 import type { DataSnapshot } from '../../lib/database/types';
 import styles from './Settings.module.css';
+import { isQuotaError } from '../../lib/database/errors';
 
 interface Props {
   backup: BackupFile;
+  /** Records in the file that failed validation and will be skipped. */
+  rejected: readonly RejectedItem[];
   fileName: string;
   current: DataSnapshot;
   onClose: () => void;
@@ -22,14 +25,14 @@ interface Props {
 const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
 /** Preview + confirm step. Nothing is written until the user confirms; the write is a single atomic transaction. */
-export function ImportDialog({ backup, fileName, current, onClose, onDone }: Props) {
+export function ImportDialog({ backup, rejected, fileName, current, onClose, onDone }: Props) {
   const store = useDataStore();
   const [mode, setMode] = useState<ImportMode>('merge');
   const [conflict, setConflict] = useState<ConflictPolicy>('keep-existing');
   const [applyPrefs, setApplyPrefs] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { plan, report } = useMemo(() => planImport(current, backup, mode, conflict), [current, backup, mode, conflict]);
+  const { plan, report } = useMemo(() => planImport(current, backup, mode, conflict, rejected), [current, backup, mode, conflict, rejected]);
   const d = backup.data;
   const currentCount = current.foodEntries.length + current.assessments.length + current.weights.length;
   const exported = new Date(backup.exportedAt);
@@ -41,13 +44,17 @@ export function ImportDialog({ backup, fileName, current, onClose, onDone }: Pro
     try {
       await store.applyImport(plan);
       if (applyPrefs) preferencesStore.update({ theme: backup.preferences.theme, units: backup.preferences.units });
-      onDone(
+      const summary =
         mode === 'replace'
           ? `Backup restored: ${pluralize(report.added, 'record')} now on this device.`
-          : `Import complete: ${report.added} added, ${report.updated} updated, ${report.unchanged + report.conflictsKept} unchanged.`,
+          : `Import complete: ${report.added} added, ${report.updated} updated, ${report.unchanged + report.conflictsKept} unchanged.`;
+      onDone(rejected.length > 0 ? `${summary} ${pluralize(rejected.length, 'invalid item')} skipped.` : summary);
+    } catch (err) {
+      setError(
+        isQuotaError(err)
+          ? 'There is not enough storage space on this device for this import. It was rolled back and your existing data has not been changed.'
+          : 'The import failed and was rolled back. Your existing data has not been changed.',
       );
-    } catch {
-      setError('The import failed and was rolled back. Your existing data has not been changed.');
       setBusy(false);
     }
   };
@@ -65,7 +72,7 @@ export function ImportDialog({ backup, fileName, current, onClose, onDone }: Pro
             Cancel
           </Button>
           <Button variant={mode === 'replace' ? 'danger' : 'primary'} onClick={() => void confirm()} loading={busy}>
-            {mode === 'replace' ? 'Replace my data' : 'Import'}
+            {mode === 'replace' ? 'Replace my data' : rejected.length > 0 ? 'Import valid records' : 'Import'}
           </Button>
         </>
       }
@@ -75,6 +82,26 @@ export function ImportDialog({ backup, fileName, current, onClose, onDone }: Pro
           <strong>{fileName}</strong> · exported {Number.isNaN(exported.getTime()) ? 'at an unknown time' : dateTime.format(exported)} · app
           version {backup.appVersion || 'unknown'}
         </p>
+        {rejected.length > 0 && (
+          <Notice tone="warning" title={`${pluralize(rejected.length, 'item')} in this file can’t be imported`}>
+            <p>
+              {rejected.length === 1 ? 'It is' : 'They are'} invalid or damaged and will be skipped. Everything else in the file is
+              valid and can still be imported. Your current data is not affected by skipped items.
+            </p>
+            <ul className={styles.rejectedList}>
+              {rejected.slice(0, 8).map((r, i) => (
+                <li key={i}>
+                  <strong>
+                    {r.kind}
+                    {r.position !== null && ` #${r.position}`}
+                  </strong>
+                  {r.id && <span className="muted"> (ID {r.id})</span>}: {r.reason}
+                </li>
+              ))}
+            </ul>
+            {rejected.length > 8 && <p className="small">…and {formatInt(rejected.length - 8)} more.</p>}
+          </Notice>
+        )}
         <table className={styles.previewTable}>
           <caption className="visually-hidden">Records in this backup compared with this device</caption>
           <thead>

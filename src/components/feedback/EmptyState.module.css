@@ -37,3 +37,11 @@
 .compact {
   padding: var(--space-4);
 }
+
+/* Actions are standalone controls, so links get a full touch target. */
+.action a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 600;
+}

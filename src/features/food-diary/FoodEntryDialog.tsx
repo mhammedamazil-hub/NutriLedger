@@ -12,6 +12,8 @@ import type { FoodEntry } from '../../types/models';
 import { emptyFoodForm, entryToForm, parseFoodForm, type FoodFormValues } from './foodForm';
 import { PortionCalculator } from './PortionCalculator';
 import styles from './Diary.module.css';
+import { saveErrorMessage } from '../../lib/database/errors';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 interface Props {
   open: boolean;
@@ -20,19 +22,24 @@ interface Props {
   entry: FoodEntry | null;
   defaultDate: string;
   defaultMeal?: string;
+  /** Pre-fills a new entry from an existing one (duplicate). The copy uses `defaultDate`. */
+  template?: FoodEntry | null;
 }
 
 export function FoodEntryDialog(props: Props) {
   // Remount the form whenever the dialog opens for a different target so state is fresh.
   if (!props.open) return <Dialog open={false} title="" onClose={props.onClose}>{null}</Dialog>;
-  return <FoodEntryForm key={`${props.entry?.id ?? 'new'}-${props.defaultDate}-${props.defaultMeal ?? ''}`} {...props} />;
+  return <FoodEntryForm key={`${props.entry?.id ?? 'new'}-${props.template?.id ?? ''}-${props.defaultDate}-${props.defaultMeal ?? ''}`} {...props} />;
 }
 
-function FoodEntryForm({ open, onClose, entry, defaultDate, defaultMeal }: Props) {
+function FoodEntryForm({ open, onClose, entry, defaultDate, defaultMeal, template }: Props) {
   const store = useDataStore();
   const toast = useToast();
   const customMeals = useData((s) => s.customMeals);
-  const initial = useMemo(() => (entry ? entryToForm(entry) : emptyFoodForm(defaultDate, defaultMeal)), [entry, defaultDate, defaultMeal]);
+  const initial = useMemo(
+    () => (entry ? entryToForm(entry) : template ? { ...entryToForm(template), date: defaultDate } : emptyFoodForm(defaultDate, defaultMeal)),
+    [entry, template, defaultDate, defaultMeal],
+  );
   const [values, setValues] = useState<FoodFormValues>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -44,6 +51,7 @@ function FoodEntryForm({ open, onClose, entry, defaultDate, defaultMeal }: Props
 
   const meals = orderedMeals(customMeals, [values.meal]);
   const dirty = JSON.stringify(values) !== JSON.stringify(initial);
+  useUnsavedChanges(dirty);
 
   const set = (key: keyof FoodFormValues) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const v = e.target.value;
@@ -84,7 +92,7 @@ function FoodEntryForm({ open, onClose, entry, defaultDate, defaultMeal }: Props
       setSaveError(
         err instanceof Error && /no longer exists/.test(err.message)
           ? err.message
-          : 'The entry could not be saved to this device. Your input is still here — try again.',
+          : saveErrorMessage(err, 'The entry could not be saved to this device. Your input is still here — try again.'),
       );
     } finally {
       submitting.current = false;
@@ -105,7 +113,7 @@ function FoodEntryForm({ open, onClose, entry, defaultDate, defaultMeal }: Props
     <Dialog
       open={open}
       wide
-      title={entry ? 'Edit food entry' : 'Add food'}
+      title={entry ? 'Edit food entry' : template ? 'Duplicate food entry' : 'Add food'}
       onClose={requestClose}
       canClose={() => {
         if (saving) return false;

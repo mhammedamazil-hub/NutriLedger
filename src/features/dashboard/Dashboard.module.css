@@ -214,9 +214,13 @@
 
 .recentName {
   font-weight: 600;
+  /* Long names wrap to two lines rather than being cut to a few characters. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .steps {

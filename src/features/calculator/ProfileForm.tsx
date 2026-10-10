@@ -8,9 +8,11 @@ import { useToast } from '../../components/feedback/toastContext';
 import { useData, useDataStore } from '../../app/dataContext';
 import { preferencesStore, usePreferences } from '../../app/preferences';
 import type { UnitSystem } from '../../types/models';
-import { convertFormUnits, parseCalcForm, profileToForm, type CalcFormValues } from './calculatorForm';
+import { parseCalcForm, profileToForm, switchFormUnits, type CalcFormValues, type UnitSwitchMemo } from './calculatorForm';
 import { ActivityPicker } from './ActivityPicker';
 import styles from './Calculator.module.css';
+import { saveErrorMessage } from '../../lib/database/errors';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 type Errors = Partial<Record<keyof CalcFormValues | 'height', string>>;
 
@@ -24,9 +26,11 @@ export function ProfileForm() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const busy = useRef(false);
+  const unitMemo = useRef<UnitSwitchMemo | null>(null);
 
   const saved = profileToForm(profile, units);
   const dirty = JSON.stringify(values) !== JSON.stringify(saved);
+  useUnsavedChanges(dirty);
   const imperial = units === 'imperial';
   const lenUnit = imperial ? 'in' : 'cm';
 
@@ -37,7 +41,16 @@ export function ProfileForm() {
   };
 
   const changeUnits = (next: UnitSystem) => {
-    setValues((p) => (dirty ? convertFormUnits(p, units, next) : profileToForm(profile, next)));
+    if (dirty) {
+      // Unsaved input: convert, restoring untouched fields exactly when switching back.
+      const r = switchFormUnits(values, units, next, unitMemo.current);
+      unitMemo.current = r.memo;
+      setValues(r.values);
+    } else {
+      // Nothing typed: re-display the stored metric values, which is always exact.
+      unitMemo.current = null;
+      setValues(profileToForm(profile, next));
+    }
     setErrors({});
     preferencesStore.update({ units: next });
   };
@@ -60,8 +73,8 @@ export function ProfileForm() {
       setValues(profileToForm({ ...r.profile, updatedAt: null }, units));
       toast.show('Profile saved. Results updated.');
       document.getElementById('results-title')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    } catch {
-      setSaveError('Your profile could not be saved on this device. Your input is still here — try again.');
+    } catch (err) {
+      setSaveError(saveErrorMessage(err, 'Your profile could not be saved on this device. Your input is still here — try again.'));
     } finally {
       busy.current = false;
       setSaving(false);

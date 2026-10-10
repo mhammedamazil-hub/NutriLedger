@@ -171,3 +171,41 @@ svg {
     scroll-behavior: auto !important;
   }
 }
+
+/* Standalone text links / summaries (not links inside sentences) get a
+   44px-high touch target without looking like buttons. */
+.tap-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 600;
+}
+
+summary.tap-link {
+  /* keep the native disclosure marker */
+  display: list-item;
+  min-height: var(--tap);
+  padding-block: calc((var(--tap) - 1.5em) / 2);
+  line-height: 1.5;
+}
+
+/* Native file pickers: make the whole control a comfortable touch target. */
+input[type='file'] {
+  min-height: var(--tap);
+  max-width: 100%;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+input[type='file']::file-selector-button {
+  min-height: var(--tap);
+  margin-right: var(--space-3);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

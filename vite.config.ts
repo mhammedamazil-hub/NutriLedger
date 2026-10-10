@@ -82,6 +82,12 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: false,
+    // Once the Workbox service worker controls the page, Chromium discards
+    // <link rel="modulepreload"> hints for SW-served chunks ("cross-world
+    // service worker resource mismatch"), wasting a network request per chunk
+    // on every repeat visit and failing noisily offline. Chunks come from the
+    // precache after the first visit, so preloading only helped visit one.
+    modulePreload: false,
   },
   test: {
     environment: 'jsdom',

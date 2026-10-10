@@ -32,18 +32,56 @@ describe('backup parsing', () => {
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/newer version/) });
   });
 
-  it('rejects malformed records with details', () => {
-    const obj = JSON.parse(backupText({ foodEntries: [makeEntry()] }));
-    obj.data.foodEntries[0].calories = 'a lot';
-    obj.data.foodEntries[0].date = '2026-02-31';
+  it('skips malformed records, keeps the valid ones, and reports each rejection', () => {
+    const obj = JSON.parse(backupText({ foodEntries: [makeEntry({ id: 'good' }), makeEntry({ id: 'bad' })], weights: [makeWeight({ id: 'w-ok' })] }));
+    obj.data.foodEntries[1].calories = 'a lot';
+    obj.data.foodEntries[1].date = '2026-02-31';
+    obj.data.weights.push({ id: 'w-bad', weightKg: Number.MAX_VALUE });
     const r = parseBackupText(JSON.stringify(obj));
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.details?.join(' ')).toMatch(/foodEntries\.0/);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.backup.data.foodEntries.map((e) => e.id)).toEqual(['good']);
+    expect(r.backup.data.weights.map((w) => w.id)).toEqual(['w-ok']);
+    expect(r.rejected).toHaveLength(2);
+    expect(r.rejected[0]).toMatchObject({ kind: 'Food entry', position: 2, id: 'bad' });
+    expect(r.rejected[0]?.reason).toMatch(/calories|date/);
+    expect(r.rejected[1]).toMatchObject({ kind: 'Weight record', position: 2, id: 'w-bad' });
   });
 
-  it('rejects duplicate IDs inside a backup', () => {
-    const r = parseBackupText(backupText({ foodEntries: [makeEntry({ id: 'd' }), makeEntry({ id: 'd' })] }));
-    expect(r).toMatchObject({ ok: false });
+  it('rejects every copy of an ID that appears twice in one file, keeping the rest', () => {
+    const r = parseBackupText(
+      backupText({ foodEntries: [makeEntry({ id: 'd', calories: 1 }), makeEntry({ id: 'd', calories: 2 }), makeEntry({ id: 'u' })] }),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.backup.data.foodEntries.map((e) => e.id)).toEqual(['u']);
+    expect(r.rejected.map((x) => [x.id, x.position])).toEqual([
+      ['d', 1],
+      ['d', 2],
+    ]);
+    expect(r.rejected[0]?.reason).toMatch(/more than once/);
+  });
+
+  it('a damaged profile is reported and never overwrites the current profile, even in replace mode', () => {
+    const obj = JSON.parse(backupText({ foodEntries: [makeEntry({ id: 'x' })] }));
+    obj.data.profile = { age: -4, sex: 'robot' };
+    const r = parseBackupText(JSON.stringify(obj));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.rejected).toEqual([expect.objectContaining({ kind: 'Profile', position: null })]);
+    const current = { ...emptySnapshot(), profile: { ...emptySnapshot().profile, age: 40, sex: 'female' as const, updatedAt: '2026-10-01T00:00:00.000Z' } };
+    const { plan, report } = planImport(current, r.backup, 'replace', 'keep-existing', r.rejected);
+    expect(plan.profile).toEqual(current.profile);
+    expect(report.profileChanged).toBe(false);
+    expect(plan.foodEntries.map((e) => e.id)).toEqual(['x']);
+  });
+
+  it('still rejects the whole file when its structure is broken', () => {
+    const obj = JSON.parse(backupText());
+    obj.data.weights = { not: 'a list' };
+    const r = parseBackupText(JSON.stringify(obj));
+    expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/damaged or incomplete/) });
+    if (!r.ok) expect(r.details?.join(' ')).toMatch(/data\.weights/);
   });
 
   it('strips unknown fields such as smuggled credentials', () => {

@@ -11,7 +11,7 @@ import { keyStore } from '../../lib/ai/keyStore';
 import { backupFilename, createBackup, serializeBackup, type BackupFile } from '../../lib/export/backup';
 import { assessmentsToCsv, dailyTotalsToCsv, foodEntriesToCsv, weightsToCsv } from '../../lib/export/csv';
 import { downloadText } from '../../lib/export/download';
-import { parseBackupFile } from '../../lib/import/backup';
+import { parseBackupFile, type RejectedItem } from '../../lib/import/backup';
 import type { DataSnapshot } from '../../lib/database/types';
 import { pluralize } from '../../lib/formatting/numbers';
 import { ImportDialog } from './ImportDialog';
@@ -48,7 +48,7 @@ export function DataSection() {
   const [food, assessments, weights] = counts.split('|').map(Number) as [number, number, number];
   const total = food + assessments + weights;
   const [info, setInfo] = useState<StorageInfo>({ persisted: null, usage: null, quota: null });
-  const [importState, setImportState] = useState<{ backup: BackupFile; fileName: string; current: DataSnapshot } | null>(null);
+  const [importState, setImportState] = useState<{ backup: BackupFile; rejected: RejectedItem[]; fileName: string; current: DataSnapshot } | null>(null);
   const [importError, setImportError] = useState<{ error: string; details?: string[] | undefined } | null>(null);
   const [reading, setReading] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -102,7 +102,7 @@ export function DataSection() {
     setReading(true);
     try {
       const r = await parseBackupFile(file);
-      if (r.ok) setImportState({ backup: r.backup, fileName: file.name, current: store.snapshot() });
+      if (r.ok) setImportState({ backup: r.backup, rejected: r.rejected, fileName: file.name, current: store.snapshot() });
       else setImportError({ error: r.error, details: r.details });
     } finally {
       setReading(false);
@@ -221,6 +221,7 @@ export function DataSection() {
       {importState && (
         <ImportDialog
           backup={importState.backup}
+          rejected={importState.rejected}
           fileName={importState.fileName}
           current={importState.current}
           onClose={() => setImportState(null)}

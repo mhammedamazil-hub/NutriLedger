@@ -46,7 +46,7 @@ describe('progress', () => {
     await user.click(screen.getByText(/Edit or delete records/));
     await user.click(screen.getByRole('button', { name: /Delete weight from/ }));
     await waitFor(async () => expect((await repo.loadAll()).snapshot.weights).toHaveLength(0));
-    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await user.click(await screen.findByRole('button', { name: /^Undo: Deleted weight record from / }));
     await waitFor(async () => expect((await repo.loadAll()).snapshot.weights).toHaveLength(1));
   });
 

@@ -2,6 +2,7 @@ import type { ActivityLevel, Profile, Sex, UnitSystem } from '../../types/models
 import { ACTIVITY_LEVELS } from '../../types/models';
 import { BOUNDS } from '../../lib/validation/bounds';
 import { parseNumberInput, roundTo } from '../../lib/formatting/numbers';
+import { isValidDayKey } from '../../lib/formatting/dates';
 import { cmToFeetInches, cmToIn, feetInchesToCm, inToCm, kgToLb, lbToKg } from '../../lib/calculations/units';
 
 /** Raw strings as typed. Height uses `heightCm` in metric or `heightFt` + `heightIn` in imperial. */
@@ -166,4 +167,47 @@ export function convertFormUnits(v: CalcFormValues, from: UnitSystem, to: UnitSy
     if (ft !== null) next.heightCm = s(feetInchesToCm(ft, n(v.heightIn) ?? 0));
   }
   return next;
+}
+
+/** Remembers the last unit switch so switching back restores untouched fields exactly. */
+export interface UnitSwitchMemo {
+  before: CalcFormValues;
+  after: CalcFormValues;
+  to: UnitSystem;
+}
+
+const LENGTH_AND_WEIGHT = ['weight', 'neck', 'waist', 'hip'] as const;
+
+/**
+ * Lossless unit switching for unsaved input. Converting always rounds for
+ * display (0.1 lb, 0.1 in…), so a plain round trip can move a value
+ * (178 cm → 5 ft 10.1 in → 178.1 cm). When switching back, any field the user
+ * has not touched since the previous switch gets its exact original text back;
+ * only edited fields are converted.
+ */
+export function switchFormUnits(
+  v: CalcFormValues,
+  from: UnitSystem,
+  to: UnitSystem,
+  memo: UnitSwitchMemo | null,
+): { values: CalcFormValues; memo: UnitSwitchMemo | null } {
+  if (from === to) return { values: v, memo };
+  const out = convertFormUnits(v, from, to);
+  if (memo && memo.to === from) {
+    for (const f of LENGTH_AND_WEIGHT) if (v[f] === memo.after[f]) out[f] = memo.before[f];
+    if (from === 'imperial') {
+      if (v.heightFt === memo.after.heightFt && v.heightIn === memo.after.heightIn) out.heightCm = memo.before.heightCm;
+    } else if (v.heightCm === memo.after.heightCm) {
+      out.heightFt = memo.before.heightFt;
+      out.heightIn = memo.before.heightIn;
+    }
+  }
+  return { values: out, memo: { before: v, after: out, to } };
+}
+
+/** Assessment dates must be real calendar days and not in the future. Returns an error message or null. */
+export function validateAssessmentDate(date: string, today: string): string | null {
+  if (!isValidDayKey(date)) return 'Choose a valid date.';
+  if (date > today) return 'The assessment date can’t be in the future.';
+  return null;
 }

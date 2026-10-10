@@ -45,7 +45,7 @@ export function GettingStarted({ profileDone, targetDone, loggedDone, today }: P
               {s.done && <span className="visually-hidden"> (done)</span>}
             </span>
             <span className="small muted">{s.text}</span>
-            <Link to={s.link.to} className="small" style={{ fontWeight: 600 }}>
+            <Link to={s.link.to} className="small tap-link">
               {s.link.label}
             </Link>
           </li>

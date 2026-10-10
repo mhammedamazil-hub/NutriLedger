@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'dev-dist', 'coverage', 'node_modules', 'scripts/.browser'] },
+  { ignores: ['dist', 'dev-dist', 'coverage', 'node_modules', 'scripts/.browser', 'audit-out'] },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
@@ -28,5 +28,10 @@ export default tseslint.config(
     files: ['scripts/**/*.{js,mjs}', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
     extends: [js.configs.recommended],
+  },
+  {
+    // The browser audit runs Node code plus functions evaluated inside the page (page.evaluate).
+    files: ['scripts/browser-audit.mjs', 'scripts/browser-e2e.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
 );

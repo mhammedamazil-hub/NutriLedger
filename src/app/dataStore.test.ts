@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DataStore } from './dataStore';
 import { createMemoryRepository } from '../lib/database/memory';
 import { totalsFor } from '../lib/calculations/nutrition';
@@ -111,5 +111,23 @@ describe('DataStore', () => {
     await store.saveAssessment(base);
     await store.saveAssessment(base);
     expect(store.getState().assessments).toHaveLength(2);
+  });
+
+  it('a quota failure rejects without changing in-memory state, and later writes still work', async () => {
+    const repo = createMemoryRepository();
+    const store = new DataStore(async () => repo);
+    await store.init();
+    await store.addFoodEntry(input({ name: 'First' }));
+    const before = store.getState();
+    vi.spyOn(repo, 'putFoodEntry').mockRejectedValueOnce(new DOMException('full', 'QuotaExceededError'));
+    await expect(store.addFoodEntry(input({ name: 'Second' }))).rejects.toMatchObject({ name: 'QuotaExceededError' });
+    expect(store.getState().foodEntries).toBe(before.foodEntries);
+    vi.spyOn(repo, 'putWeight').mockRejectedValueOnce(new DOMException('full', 'QuotaExceededError'));
+    await expect(store.addWeight({ date: '2026-10-10', weightKg: 70, note: '' })).rejects.toBeTruthy();
+    expect(store.getState().weights).toHaveLength(0);
+    // The queue is not stuck after a failure.
+    await store.addFoodEntry(input({ name: 'Third' }));
+    expect(store.getState().foodEntries.map((e) => e.name).sort()).toEqual(['First', 'Third']);
+    expect((await repo.loadAll()).snapshot.foodEntries).toHaveLength(2);
   });
 });

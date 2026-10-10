@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { formatInt, formatOne } from '../../lib/formatting/numbers';
@@ -11,11 +11,13 @@ export function EntryRow({
   entry,
   onEdit,
   onDelete,
+  onDuplicate,
   showDate,
 }: {
   entry: FoodEntry;
   onEdit: (e: FoodEntry) => void;
   onDelete: (e: FoodEntry) => void;
+  onDuplicate: (e: FoodEntry) => void;
   showDate?: string;
 }) {
   const incomplete = entry.protein === null || entry.carbs === null || entry.fat === null;
@@ -38,6 +40,7 @@ export function EntryRow({
       <div className={styles.entrySide}>
         <span className={styles.entryKcal}>{formatInt(entry.calories)} kcal</span>
         <Button iconOnly variant="ghost" size="sm" aria-label={`Edit ${entry.name}`} onClick={() => onEdit(entry)} icon={<Pencil aria-hidden="true" />} />
+        <Button iconOnly variant="ghost" size="sm" aria-label={`Duplicate ${entry.name}`} onClick={() => onDuplicate(entry)} icon={<Copy aria-hidden="true" />} />
         <Button iconOnly variant="ghost" size="sm" aria-label={`Delete ${entry.name}`} onClick={() => onDelete(entry)} icon={<Trash2 aria-hidden="true" />} />
       </div>
     </li>

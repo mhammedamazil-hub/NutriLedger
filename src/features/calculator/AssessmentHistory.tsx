@@ -47,7 +47,7 @@ export function AssessmentHistory() {
                 </span>
                 {a.notes && <span className={styles.historyMeta}>Note: {a.notes}</span>}
                 <details>
-                  <summary className="small" style={{ cursor: 'pointer', color: 'var(--c-primary)', fontWeight: 600 }}>
+                  <summary className="small tap-link" style={{ cursor: 'pointer', color: 'var(--c-primary)' }}>
                     Arithmetic
                   </summary>
                   <div style={{ marginTop: 'var(--space-2)' }}>

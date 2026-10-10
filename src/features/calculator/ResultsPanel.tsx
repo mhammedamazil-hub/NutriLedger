@@ -12,10 +12,11 @@ import { useProfileEstimate } from '../../hooks/useDerived';
 import { useTodayKey } from '../../hooks/useTodayKey';
 import { ACTIVITY_INFO } from '../../lib/calculations/energy';
 import { formatInt, formatOne, formatWeight } from '../../lib/formatting/numbers';
-import { isValidDayKey } from '../../lib/formatting/dates';
 import { BOUNDS } from '../../lib/validation/bounds';
 import type { AssessmentInputs, AssessmentResults } from '../../types/models';
 import styles from './Calculator.module.css';
+import { saveErrorMessage } from '../../lib/database/errors';
+import { validateAssessmentDate } from './calculatorForm';
 
 const n2 = (n: number) => formatOne(n);
 
@@ -127,8 +128,9 @@ export function ResultsPanel() {
 
   const saveAssessment = async () => {
     if (busy) return;
-    if (!isValidDayKey(date)) {
-      setDateError('Choose a valid date.');
+    const dateProblem = validateAssessmentDate(date, today);
+    if (dateProblem) {
+      setDateError(dateProblem);
       return;
     }
     setBusy('save');
@@ -136,8 +138,8 @@ export function ResultsPanel() {
       await store.saveAssessment({ date, inputs, results, notes: notes.trim() });
       setNotes('');
       toast.show('Assessment saved to history.');
-    } catch {
-      toast.show('The assessment could not be saved.', { tone: 'error' });
+    } catch (err) {
+      toast.show(saveErrorMessage(err, 'The assessment could not be saved.'), { tone: 'error', durationMs: 10000 });
     } finally {
       setBusy(null);
     }
@@ -162,8 +164,8 @@ export function ResultsPanel() {
           },
         },
       });
-    } catch {
-      toast.show('The target could not be saved.', { tone: 'error' });
+    } catch (err) {
+      toast.show(saveErrorMessage(err, 'The target could not be saved.'), { tone: 'error', durationMs: 10000 });
     } finally {
       setBusy(null);
     }

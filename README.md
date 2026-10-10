@@ -32,8 +32,8 @@ NutriLedger is a private nutrition diary and energy calculator that runs in your
 | Section | What it does |
 | --- | --- |
 | **Dashboard** | Today's calories and macros. Shows a target and what remains **only if you set or accepted one**, plus a per-meal breakdown and recent entries. Also shows BMR, TDEE and energy balance (intake − TDEE, labelled as an estimate) and a 7-day intake chart where unlogged days stay empty instead of counting as zero. Covers every state: new user, incomplete profile, nothing logged today, offline, no AI key, and storage unavailable. |
-| **Food Diary** | Add, edit, delete and move entries between dates and meals. Meals are Breakfast, Lunch, Dinner, Snacks, Other, plus your own custom meals. Each entry has name, quantity, unit, calories, protein, carbs, fat, optional fiber and notes. Its source is shown as manual, nutrition label, or AI estimate. Includes "Save and add another", undo for single deletes and a confirmation for bulk deletes. A nutrition-label calculator scales label values to the portion you ate. There is date navigation with a Today button, meal filters and search across all entries. **A missing macro is shown as "Not recorded", never as 0.** |
-| **Calculator** | Local only. Takes age, sex, height, weight, activity level, optional neck/waist/hip, metric or imperial units, an assessment date and notes. Uses Mifflin–St Jeor BMR × activity multiplier → TDEE. Optionally estimates body fat with the US Navy method and adds a Katch–McArdle BMR. Validates fields inline with practical bounds. Assessments are saved to a history; new ones never overwrite old ones. Under 18: no estimates or targets are shown. |
+| **Food Diary** | Add, edit, duplicate, delete and move entries between dates and meals. **Duplicate** opens a pre-filled new entry for the day you're viewing; you can change anything (including date and meal) before saving, and the original is untouched. Meals are Breakfast, Lunch, Dinner, Snacks, Other, plus your own custom meals. Each entry has name, quantity, unit, calories, protein, carbs, fat, optional fiber and notes. Its source is shown as manual, nutrition label, or AI estimate. Includes "Save and add another", undo for single deletes and a confirmation for bulk deletes. A nutrition-label calculator scales label values to the portion you ate. There is date navigation with a Today button, meal filters and search across all entries. **A missing macro is shown as "Not recorded", never as 0.** |
+| **Calculator** | Local only. Takes age, sex, height, weight, activity level, optional neck/waist/hip, metric or imperial units, an assessment date and notes. Uses Mifflin–St Jeor BMR × activity multiplier → TDEE. Optionally estimates body fat with the US Navy method and adds a Katch–McArdle BMR. Validates fields inline with practical bounds; assessment dates must be real and not in the future. Switching units never changes what you typed: untouched fields switch back exactly (e.g. 178 cm stays 178 cm, not 178.1 cm after a round trip through 5 ft 10.1 in). Assessments are saved to a history; new ones never overwrite old ones. Under 18: no estimates or targets are shown. |
 | **Progress** | Weight records and assessments, plus daily calorie and macro charts over 7d / 30d / 90d / 1y / all. Raw values only, with no smoothing or extrapolation. Days with nothing logged are left out of averages and charts, not counted as zero. Records can be deleted with undo, and all weights can be cleared after confirmation. Every chart has a table view. |
 | **AI Nutrition** (optional) | Estimate a meal from text or from a photo. The result is structured JSON, validated with Zod and labelled as an unverified estimate. **Nothing is saved until you review it.** Also offers meal ideas, a plain-language explanation of your calculations (the numbers are computed locally, and any unexpected numbers in the reply are flagged), a summary of a date range (you see exactly what will be sent first, and notes are never sent), and cautious general Q&A. Every tool supports cancel, has a timeout and gives specific error messages. All AI tools are disabled while offline. |
 | **Settings** | Theme (light/dark/system), units, daily targets (an empty field means no target), custom meals, the Gemini key and model, CSV/JSON export, backup import, clearing data, a storage usage readout and a button to request persistent storage. Also includes privacy information, install guidance and the app version. |
@@ -93,18 +93,19 @@ npm i --no-save sharp@0.34 && node scripts/generate-icons.mjs
 npm test
 ```
 
-Current result: **25 test files, 195 tests, all passing**.
+Current result: **30 test files, 230 tests, all passing**.
 
 | Category | Tests | Files |
 | --- | ---: | --- |
 | Calculations: Mifflin–St Jeor, activity, TDEE, Katch–McArdle, US Navy body fat, units, nutrition totals and scaling | 44 | `src/lib/calculations/*.test.ts` |
-| Validation and form logic: food, calculator, weight, targets, progress series | 22 | `src/features/**/*.test.ts` |
-| Persistence on fake IndexedDB: schema, upgrade safety, CRUD, corrupted records, atomic import, bulk delete, memory fallback, data store | 17 | `src/lib/database`, `src/app/dataStore.test.ts` |
-| Export and import: CSV escaping and formula injection, backup round trip, no API key, size/type/version checks, duplicate policy | 22 | `src/lib/export`, `src/lib/import` |
+| Validation and form logic: food, calculator (incl. lossless unit switching, assessment dates), weight, targets, progress series | 31 | `src/features/**/*.test.ts` |
+| Persistence on fake IndexedDB: schema, upgrade safety, CRUD, corrupted records, atomic import, bulk delete, memory fallback, data store, failed/quota-exceeded writes leaving state unchanged | 21 | `src/lib/database`, `src/app/dataStore.test.ts` |
+| Export and import: CSV escaping and formula injection, backup round trip, no API key, size/type/version checks, duplicate policy, partial imports with a rejected-items report | 24 | `src/lib/export`, `src/lib/import` |
 | AI with a mocked SDK: schema validation, error classification, retries, timeouts, cancel, stale responses, prompts, key storage, image checks | 30 | `src/lib/ai/ai.test.ts` |
 | Formatting | 12 | `src/lib/formatting/*.test.ts` |
+| App state: preferences (incl. retired model migration), unsaved-changes guard, toast limits | 10 | `src/app/*.test.ts`, `src/components/feedback` |
 | PWA and deploy config: manifest fields, icons exist with correct pixel sizes, no runtime caching, prompt-based update, CSP, SPA rewrite | 5 | `src/test/pwa.test.ts` |
-| **Component/integration (whole app rendered)** | 43 | `src/test/integration/*.test.tsx` |
+| **Component/integration (whole app rendered)** | 53 | `src/test/integration/*.test.tsx` |
 
 The integration tests render the real `<App/>` with its router and providers against an in-memory repository and click through it with `user-event`. They cover:
 
@@ -119,6 +120,23 @@ The integration tests render the real `<App/>` with its router and providers aga
 - AI estimate → review → save, the invalid-key error keeping your input, malformed output, cancel, offline, and plain-text rendering (markup is never interpreted)
 - JSON/CSV export without the key, import preview → confirm, invalid files, and the clear-all typed confirmation
 - the storage-unavailable fallback
+- reliability: duplicate, a rapid repeated save creating one entry, edits never duplicating, a full device (quota error) keeping the form and data unchanged, a failed bulk delete keeping the confirmation open with an error, partial imports, and the update prompt asking before discarding unsaved input
+
+### Real-browser checks (headless Chromium)
+
+Two scripts in `scripts/` drive a real headless Chromium (via `puppeteer-core`, which is **not** a project dependency) against the production build served by `npm run preview`:
+
+- `scripts/browser-audit.mjs` loads every route at 320, 360, 375, 390, 430, 768, 1024, 1280 and 1440 px, in light and dark themes, empty and with seeded records (324 page loads). It checks for horizontal overflow, clipped text, content hidden behind the bottom navigation and touch targets under 44 px, runs axe-core at 375 and 1280 px, records console errors and saves screenshots to `audit-out/` (git-ignored).
+- `scripts/browser-e2e.mjs` checks that the service worker takes control, an entry survives reload, a rapid triple click on Save creates one entry, duplicate works, the app reloads and accepts new entries **offline**, AI is clearly disabled offline, a new release is announced rather than auto-applied, the update never reloads over unsaved input without asking, and IndexedDB records survive the update. It makes no Gemini requests.
+
+```bash
+# in any scratch directory
+npm i puppeteer-core axe-core
+CHROME_PATH=/path/to/chrome BASE_URL=http://localhost:4173 node /path/to/NutriLedger/scripts/browser-audit.mjs
+CHROME_PATH=/path/to/chrome SW_FILE=/path/to/NutriLedger/dist/sw.js node /path/to/NutriLedger/scripts/browser-e2e.mjs
+```
+
+Last results: audit — 0 layout findings, 0 axe violations, 0 console errors; e2e — 17/17 checks passed. These ran in headless Chromium in a Linux sandbox, **not** on physical phones, Safari or Firefox.
 
 ### Acceptance scenario
 
@@ -156,6 +174,8 @@ npm run build
 
 Output goes to `dist/`. The main bundle is about 272 kB (about 86 kB gzip). Recharts (about 338 kB) and the Gemini SDK (about 368 kB) are split into chunks that load on demand. The service worker precaches the app shell, every route chunk and the fonts (54 entries, about 1.5 MB), so every local feature works offline after the first visit.
 
+`build.modulePreload` is turned off in `vite.config.ts`. With it on, Chromium logs a "preload … service worker resource mismatch" warning on every visit once the service worker is in control (a known vite-plugin-pwa interaction with no functional effect). The cost is a slightly slower very first load, before the service worker is installed.
+
 ## 7. Deploy to Vercel (free tier)
 
 1. Push the repository to GitHub.
@@ -177,7 +197,7 @@ The CSP allows network connections only to the app itself and `https://generativ
 
 - **Install:** Chrome, Edge and Android show an *Install* button in Settings when the browser offers one. On iPhone and iPad, use Safari → Share → *Add to Home Screen*.
 - **Offline:** after the first load, the diary, calculator, progress, settings, export and import all work with no connection. A banner shows when you are offline. AI tools are disabled while offline, with a clear message, and never return placeholder results.
-- **Updates:** when a new version is available, a "Reload to update" prompt appears. Updates never change your stored records.
+- **Updates:** a new version is never applied silently. A "Reload to update" prompt appears; if any form (food entry, calculator, targets, weight, or an AI estimate waiting for review) has unsaved input, the app asks first and you can choose *Not now*. While a form has unsaved input, the browser also warns before the tab is closed. Updates never change your stored records.
 - The service worker never caches Gemini requests (`runtimeCaching` is empty).
 
 ## 9. Optional AI: bring your own Gemini key
@@ -185,7 +205,7 @@ The CSP allows network connections only to the app itself and `https://generativ
 1. Create a key at [Google AI Studio](https://aistudio.google.com/apikey). Google's free tier is enough for personal use, but check Google's current terms and quotas.
 2. In **Settings → AI assistant**, paste the key. You can use **Show key** to check it.
 3. Optionally click **Test connection**. Nothing is sent until you click it.
-4. Choose a model from the list. Gemini 3.5 Flash is the default; Gemini 3.8 Flash, the 3.5 and 3.1 Flash-Lite models and the `gemini-flash-latest` alias are also offered.
+4. Choose a model from the list. Gemini 3.8 Flash is the default; Gemini 3.6 Flash, the 3.5 and 3.1 Flash-Lite models and the `gemini-flash-latest` alias are also offered (checked against Google's model list in October 2026). A previously saved model that is no longer offered, such as the deprecated `gemini-3.5-flash`, switches to the default automatically.
 
 **How the key is handled**
 
@@ -220,12 +240,14 @@ AI results are **estimates and unverified**. Food estimates are shown in an edit
 - **Import (JSON backup):**
   - The file is checked for type and size (20 MB limit), parsed, validated with Zod, and checked for a supported schema version.
   - You get a preview of what will be added, skipped or replaced before anything changes.
+  - **Damaged files vs damaged records:** if the file itself is broken (not JSON, not a NutriLedger backup, a newer schema version, or missing record lists), nothing is imported. If only some records are invalid, those records are skipped and listed (type, position, ID and reason) before you confirm; the button reads *Import valid records*. A damaged profile, targets or custom-meals section never overwrites your current one, even in *replace* mode.
   - You can **merge** or **replace everything**.
   - **Duplicate policy (merge):**
     - A record with the same ID and identical content is skipped.
     - When the same ID has different content, you choose to *keep existing* (the default) or *use the backup*.
-    - A file that repeats an ID within itself is rejected.
+    - If a file repeats an ID within itself, every copy of that ID is skipped and reported (the app can't tell which one is right).
   - The import runs in a **single IndexedDB transaction**, so if anything fails, your existing data stays as it was.
+- **Failed saves:** every write goes to IndexedDB before the screen updates, so a failed save never shows data that wasn't stored. If the device is out of storage space, the app says so specifically, keeps what you typed, and nothing is changed; free space (or export and delete old records) and retry.
 - **Delete:** single entries (with undo), all entries for a day, or all weights, each with confirmation. Assessments can be deleted from history. **Clear all local data** asks you to type `DELETE`. It removes all records, the stored key and your preferences.
 
 ## 11. Formulas and sources
@@ -340,14 +362,12 @@ These checks were done during development:
 
 **Untested or only partly tested**
 
-- **No real-browser testing.** All tests run in jsdom. A headless browser could not be started in the development sandbox, so the following were **not** checked in a real browser:
-  - responsive layout at 320–1440+ px and absence of horizontal overflow
-  - the service worker's offline behaviour, the update prompt and install prompts
-  - IndexedDB in Safari/Firefox private modes
-  - charts as actually drawn (in jsdom they render only as data tables)
-  - screen readers and dark-mode contrast
-- **No live Gemini calls.** All AI behaviour is tested against a mocked SDK, so the exact error formats from the live API, and the model IDs in the list, have not been confirmed.
-- No automated accessibility audit (such as axe) has been run. Accessibility relies on semantic HTML, labelled controls, focus management and the role-based queries in the tests.
+- **Real-browser coverage is headless Chromium only** (see *Real-browser checks* in section 5). Layout at 320–1440 px, axe (including colour contrast in both themes), offline reload and the update flow were checked there. **Not** checked:
+  - physical Android/iOS devices, on-screen keyboards, and safe-area insets on notched phones
+  - Safari and Firefox (including IndexedDB in their private modes)
+  - the install prompt / Add to Home Screen flow
+  - screen readers (axe checks markup, not the spoken experience)
+- **No live Gemini calls.** All AI behaviour is tested against a mocked SDK, so the exact error formats from the live API have not been confirmed. Model IDs were checked against Google's published model list (October 2026), not by calling the API.
 - **Not deployed to Vercel.**
 
 ## License

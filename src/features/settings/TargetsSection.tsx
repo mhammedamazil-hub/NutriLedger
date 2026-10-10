@@ -11,6 +11,8 @@ import { BOUNDS, LOW_TARGET_CAUTION_KCAL } from '../../lib/validation/bounds';
 import { formatInt, parseNumberInput } from '../../lib/formatting/numbers';
 import type { Targets } from '../../types/models';
 import { parseTargets, type TargetKey } from './targetsForm';
+import { saveErrorMessage } from '../../lib/database/errors';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 type Key = TargetKey;
 const str = (n: number | null) => (n === null ? '' : String(n));
@@ -27,6 +29,7 @@ export function TargetsSection() {
   const busy = useRef(false);
   const savedForm = toForm(targets);
   const dirty = JSON.stringify(values) !== JSON.stringify(savedForm);
+  useUnsavedChanges(dirty);
   const typedCalories = parseNumberInput(values.calories);
   const low = typedCalories !== null && !Number.isNaN(typedCalories) && typedCalories >= BOUNDS.targetCalories.min && typedCalories < LOW_TARGET_CAUTION_KCAL;
 
@@ -46,8 +49,8 @@ export function TargetsSection() {
       await store.saveTargets({ ...next, calorieSource });
       setValues(toForm({ ...targets, ...next }));
       toast.show(next.calories === null && next.protein === null && next.carbs === null && next.fat === null ? 'Targets cleared.' : 'Targets saved.');
-    } catch {
-      toast.show('Targets could not be saved.', { tone: 'error' });
+    } catch (err) {
+      toast.show(saveErrorMessage(err, 'Targets could not be saved.'), { tone: 'error', durationMs: 10000 });
     } finally {
       busy.current = false;
       setSaving(false);

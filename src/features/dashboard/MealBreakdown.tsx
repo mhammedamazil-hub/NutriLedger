@@ -27,7 +27,7 @@ export function MealBreakdown({ entries, today }: { entries: FoodEntry[]; today:
       titleId="meal-title"
       actions={
         entries.length > 0 ? (
-          <Link to={`/diary?date=${today}`} className="small" style={{ fontWeight: 600 }}>
+          <Link to={`/diary?date=${today}`} className="small tap-link">
             Open diary
           </Link>
         ) : undefined

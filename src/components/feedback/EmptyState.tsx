@@ -22,7 +22,7 @@ export function EmptyState({ icon, title, children, action, compact, headingLeve
       )}
       <H className={styles.title}>{title}</H>
       {children && <div className={styles.text}>{children}</div>}
-      {action}
+      {action && <div className={styles.action}>{action}</div>}
     </div>
   );
 }

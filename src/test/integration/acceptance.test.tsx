@@ -99,7 +99,7 @@ describe('acceptance journey', () => {
 
     // 11. Delete and undo.
     await user.click(screen.getByRole('button', { name: 'Delete Porridge' }));
-    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await user.click(await screen.findByRole('button', { name: 'Undo: Deleted “Porridge”.' }));
     expect(await screen.findByText('Porridge')).toBeInTheDocument();
 
     // 12. Dashboard totals match the diary and remaining is computed from the accepted target.

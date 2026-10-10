@@ -10,39 +10,31 @@ import {
   targetsSchema,
   weightRecordSchema,
 } from '../validation/schemas';
-import type { Assessment, FoodEntry, Profile, Targets, WeightRecord } from '../../types/models';
+import { EMPTY_PROFILE, EMPTY_TARGETS, type Assessment, type FoodEntry, type Profile, type Targets, type WeightRecord } from '../../types/models';
 
 /** Backups larger than this are rejected before parsing. */
 export const MAX_BACKUP_BYTES = 20 * 1024 * 1024;
 const MAX_RECORDS = 200_000;
 
-const uniqueIds = <T extends { id: string }>(items: T[]) => new Set(items.map((i) => i.id)).size === items.length;
-
 /**
- * Backup schema v1. `z.object` strips unknown keys, so any unexpected field
- * in a file (including anything that looks like a credential) is discarded.
+ * Envelope of backup schema v1. The structure is validated strictly, while
+ * individual records are validated one by one (see `parseBackupText`) so a
+ * single damaged record does not block restoring every other valid record.
+ * `z.object` strips unknown keys, so any unexpected field (including anything
+ * that looks like a credential) is discarded.
  */
-const backupV1Schema = z.object({
+const envelopeV1Schema = z.object({
   app: z.literal(BACKUP_APP_ID, { error: 'This file is not a NutriLedger backup.' }),
   schemaVersion: z.literal(1),
   exportedAt: isoTimestampSchema,
   appVersion: z.string().max(40).optional().default('unknown'),
   data: z.object({
-    foodEntries: z
-      .array(foodEntrySchema)
-      .max(MAX_RECORDS)
-      .refine(uniqueIds, { message: 'The backup contains duplicate food entry IDs.' }),
-    assessments: z
-      .array(assessmentSchema)
-      .max(MAX_RECORDS)
-      .refine(uniqueIds, { message: 'The backup contains duplicate assessment IDs.' }),
-    weights: z
-      .array(weightRecordSchema)
-      .max(MAX_RECORDS)
-      .refine(uniqueIds, { message: 'The backup contains duplicate weight record IDs.' }),
-    profile: profileSchema,
-    targets: targetsSchema,
-    customMeals: customMealsSchema,
+    foodEntries: z.array(z.unknown()).max(MAX_RECORDS),
+    assessments: z.array(z.unknown()).max(MAX_RECORDS),
+    weights: z.array(z.unknown()).max(MAX_RECORDS),
+    profile: z.unknown(),
+    targets: z.unknown(),
+    customMeals: z.unknown(),
   }),
   preferences: z
     .object({
@@ -50,11 +42,64 @@ const backupV1Schema = z.object({
       units: z.enum(['metric', 'imperial']),
     })
     .optional()
-    .default({ theme: 'system', units: 'metric' }),
+    .catch(undefined)
+    .transform((p) => p ?? { theme: 'system' as const, units: 'metric' as const }),
 });
 
+/** A record in the file that failed validation and will not be imported. */
+export interface RejectedItem {
+  /** Human-readable collection, e.g. "Food entry". */
+  kind: string;
+  /** 1-based position in the file's list, or null for single settings objects. */
+  position: number | null;
+  /** The record's ID if it had a readable one. */
+  id: string | null;
+  reason: string;
+}
+
+function issueText(error: z.ZodError): string {
+  return error.issues
+    .slice(0, 2)
+    .map((i) => (i.path.length ? `${i.path.join('.')}: ${i.message}` : i.message))
+    .join('; ');
+}
+
+function readId(raw: unknown): string | null {
+  if (raw && typeof raw === 'object' && 'id' in raw) {
+    const id = (raw as { id: unknown }).id;
+    if (typeof id === 'string' && id.length <= 64) return id;
+  }
+  return null;
+}
+
+function validateList<T extends { id: string }>(
+  raw: readonly unknown[],
+  schema: z.ZodType<T>,
+  kind: string,
+  rejected: RejectedItem[],
+): T[] {
+  const valid: Array<{ item: T; position: number }> = [];
+  raw.forEach((r, i) => {
+    const parsed = schema.safeParse(r);
+    if (parsed.success) valid.push({ item: parsed.data, position: i + 1 });
+    else rejected.push({ kind, position: i + 1, id: readId(r), reason: issueText(parsed.error) });
+  });
+  // Duplicate IDs inside one file are ambiguous (which copy is right?), so every copy is rejected.
+  const counts = new Map<string, number>();
+  for (const v of valid) counts.set(v.item.id, (counts.get(v.item.id) ?? 0) + 1);
+  const out: T[] = [];
+  for (const v of valid) {
+    if ((counts.get(v.item.id) ?? 0) > 1) {
+      rejected.push({ kind, position: v.position, id: v.item.id, reason: 'The same ID appears more than once in this file.' });
+    } else {
+      out.push(v.item);
+    }
+  }
+  return out;
+}
+
 export type ParseBackupResult =
-  | { ok: true; backup: BackupFile }
+  | { ok: true; backup: BackupFile; rejected: RejectedItem[] }
   | { ok: false; error: string; details?: string[] };
 
 /** Parses and validates backup text. Never mutates anything. */
@@ -89,15 +134,39 @@ export function parseBackupText(text: string): ParseBackupResult {
     return { ok: false, error: `Backup schema version ${version} is not supported.` };
   }
   // Future: migrate older schema versions to the current shape here, step by step.
-  const parsed = backupV1Schema.safeParse(raw);
-  if (!parsed.success) {
-    const details = parsed.error.issues.slice(0, 5).map((i) => {
+  const env = envelopeV1Schema.safeParse(raw);
+  if (!env.success) {
+    const details = env.error.issues.slice(0, 5).map((i) => {
       const path = i.path.join('.');
       return path ? `${path}: ${i.message}` : i.message;
     });
-    return { ok: false, error: 'The backup contains invalid or incomplete data. Nothing was imported.', details };
+    return { ok: false, error: 'The backup is damaged or incomplete. Nothing was imported.', details };
   }
-  return { ok: true, backup: parsed.data as BackupFile };
+  const d = env.data.data;
+  const rejected: RejectedItem[] = [];
+  const foodEntries = validateList<FoodEntry>(d.foodEntries, foodEntrySchema, 'Food entry', rejected);
+  const assessments = validateList<Assessment>(d.assessments, assessmentSchema, 'Assessment', rejected);
+  const weights = validateList<WeightRecord>(d.weights, weightRecordSchema, 'Weight record', rejected);
+
+  const single = <T,>(value: unknown, schema: z.ZodType<T>, kind: string, fallback: T): T => {
+    const r = schema.safeParse(value);
+    if (r.success) return r.data;
+    rejected.push({ kind, position: null, id: null, reason: issueText(r.error) });
+    return fallback;
+  };
+  const profile = single<Profile>(d.profile, profileSchema, 'Profile', { ...EMPTY_PROFILE });
+  const targets = single<Targets>(d.targets, targetsSchema, 'Targets', { ...EMPTY_TARGETS });
+  const customMeals = single<string[]>(d.customMeals, customMealsSchema, 'Custom meals', []);
+
+  const backup: BackupFile = {
+    app: BACKUP_APP_ID,
+    schemaVersion: 1,
+    exportedAt: env.data.exportedAt,
+    appVersion: env.data.appVersion,
+    data: { foodEntries, assessments, weights, profile, targets, customMeals },
+    preferences: env.data.preferences,
+  };
+  return { ok: true, backup, rejected };
 }
 
 /** Reads a File with type and size checks, then validates it. */
@@ -167,7 +236,10 @@ export function planImport(
   backup: BackupFile,
   mode: ImportMode,
   conflict: ConflictPolicy,
+  rejected: readonly RejectedItem[] = [],
 ): { plan: ImportPlan; report: ImportReport } {
+  // Settings objects that failed validation are never applied; the current ones are kept.
+  const rejectedKinds = new Set(rejected.filter((r) => r.position === null).map((r) => r.kind));
   const report: ImportReport = {
     added: 0,
     updated: 0,
@@ -180,17 +252,20 @@ export function planImport(
 
   if (mode === 'replace') {
     report.added = d.foodEntries.length + d.assessments.length + d.weights.length;
-    report.profileChanged = !sameJson(current.profile, d.profile);
-    report.targetsChanged = !sameJson(current.targets, d.targets);
+    const profile = rejectedKinds.has('Profile') ? current.profile : d.profile;
+    const targets = rejectedKinds.has('Targets') ? current.targets : d.targets;
+    const customMeals = rejectedKinds.has('Custom meals') ? current.customMeals : d.customMeals;
+    report.profileChanged = !sameJson(current.profile, profile);
+    report.targetsChanged = !sameJson(current.targets, targets);
     return {
       plan: {
         replace: true,
         foodEntries: d.foodEntries,
         assessments: d.assessments,
         weights: d.weights,
-        profile: d.profile,
-        targets: d.targets,
-        customMeals: d.customMeals,
+        profile,
+        targets,
+        customMeals,
       },
       report,
     };

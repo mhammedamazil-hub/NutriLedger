@@ -8,6 +8,7 @@ import { useData, useDataStore } from '../../app/dataContext';
 import { isDuplicateMeal } from '../../lib/meals';
 import { BOUNDS } from '../../lib/validation/bounds';
 import styles from './Settings.module.css';
+import { saveErrorMessage } from '../../lib/database/errors';
 
 export function MealsSection() {
   const meals = useData((s) => s.customMeals);
@@ -27,8 +28,8 @@ export function MealsSection() {
       setName('');
       setError(null);
       toast.show(`Added meal “${label}”.`);
-    } catch {
-      setError('Could not save. Try again.');
+    } catch (err) {
+      setError(saveErrorMessage(err, 'Could not save. Try again.'));
     }
   };
 

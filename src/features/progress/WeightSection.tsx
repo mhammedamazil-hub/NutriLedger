@@ -18,6 +18,8 @@ import { kgToLb } from '../../lib/calculations/units';
 import type { WeightRecord } from '../../types/models';
 import { parseWeightForm, weightToDisplay, type WeightFormValues } from './weightForm';
 import styles from './Progress.module.css';
+import { saveErrorMessage } from '../../lib/database/errors';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 interface Props {
   start: string;
@@ -54,6 +56,7 @@ export function WeightSection({ start, today, rangeLabel }: Props) {
   const { units } = usePreferences();
   const unit = weightUnit(units);
   const [values, setValues] = useState<WeightFormValues>({ date: today, weight: '', note: '' });
+  useUnsavedChanges(values.weight.trim() !== '' || values.note.trim() !== '');
   const [errors, setErrors] = useState<Partial<Record<keyof WeightFormValues, string>>>({});
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -89,8 +92,8 @@ export function WeightSection({ start, today, rangeLabel }: Props) {
       setValues({ date: today, weight: '', note: '' });
       setErrors({});
       toast.show(`Recorded ${formatWeight(r.value.weightKg, units)} for ${formatDayMedium(r.value.date)}.`);
-    } catch {
-      toast.show('The weight could not be saved.', { tone: 'error' });
+    } catch (err) {
+      toast.show(saveErrorMessage(err, 'The weight could not be saved.'), { tone: 'error', durationMs: 10000 });
     } finally {
       busy.current = false;
       setSaving(false);
@@ -120,8 +123,8 @@ export function WeightSection({ start, today, rangeLabel }: Props) {
       await store.updateWeight(editing.id, r.value);
       setEditing(null);
       toast.show('Weight record updated.');
-    } catch {
-      setEditErrors({ weight: 'Could not save. Try again.' });
+    } catch (err) {
+      setEditErrors({ weight: saveErrorMessage(err, 'Could not save. Try again.') });
     } finally {
       busy.current = false;
     }

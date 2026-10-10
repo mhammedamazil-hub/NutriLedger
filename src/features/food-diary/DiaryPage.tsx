@@ -24,7 +24,7 @@ import styles from './Diary.module.css';
 
 const SEARCH_LIMIT = 100;
 
-type DialogState = { open: false } | { open: true; entry: FoodEntry | null; meal?: string };
+type DialogState = { open: false } | { open: true; entry: FoodEntry | null; meal?: string; template?: FoodEntry };
 
 export default function DiaryPage() {
   const today = useTodayKey();
@@ -112,6 +112,7 @@ export default function DiaryPage() {
     }
   };
 
+  // Failures propagate to ConfirmDialog, which keeps the dialog open and shows an error.
   const deleteDay = async () => {
     const ids = entries.map((e) => e.id);
     const n = await store.deleteFoodEntries(ids);
@@ -121,6 +122,8 @@ export default function DiaryPage() {
 
   const openAdd = (meal?: string) => setLocalDialog(meal ? { open: true, entry: null, meal } : { open: true, entry: null });
   const openEdit = (entry: FoodEntry) => setLocalDialog({ open: true, entry });
+  /** Duplicate = a pre-filled *new* entry the user reviews (and may move to another date/meal) before saving. */
+  const openDuplicate = (template: FoodEntry) => setLocalDialog({ open: true, entry: null, template });
   const filterMealOptions = orderedMeals(customMeals, byMeal.keys());
 
   return (
@@ -196,6 +199,7 @@ export default function DiaryPage() {
                       entry={e}
                       showDate={`${formatDayMedium(e.date)} · ${mealLabel(e.meal)}`}
                       onEdit={openEdit}
+                      onDuplicate={openDuplicate}
                       onDelete={(x) => void deleteEntry(x)}
                     />
                   ))}
@@ -242,7 +246,7 @@ export default function DiaryPage() {
                   ) : (
                     <ul className={styles.entries}>
                       {list.map((e) => (
-                        <EntryRow key={e.id} entry={e} onEdit={openEdit} onDelete={(x) => void deleteEntry(x)} />
+                        <EntryRow key={e.id} entry={e} onEdit={openEdit} onDuplicate={openDuplicate} onDelete={(x) => void deleteEntry(x)} />
                       ))}
                     </ul>
                   )}
@@ -259,6 +263,7 @@ export default function DiaryPage() {
         entry={dialog.open ? dialog.entry : null}
         defaultDate={date}
         defaultMeal={dialog.open ? dialog.meal : undefined}
+        template={dialog.open ? (dialog.template ?? null) : null}
       />
 
       <ConfirmDialog

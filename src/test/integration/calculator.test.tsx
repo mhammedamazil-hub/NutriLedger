@@ -99,4 +99,21 @@ describe('calculator', () => {
     await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Delete assessment' }));
     await waitFor(async () => expect((await repo.loadAll()).snapshot.assessments).toHaveLength(1));
   });
+
+  it('switching units back and forth never changes typed measurements', async () => {
+    const { user } = renderApp('/calculator');
+    await screen.findByRole('heading', { level: 1, name: 'Energy calculator' });
+    await user.type(screen.getByRole('textbox', { name: 'Weight' }), '80');
+    await user.type(screen.getByRole('textbox', { name: 'Height' }), '178');
+    for (let i = 0; i < 3; i++) {
+      await user.click(screen.getByRole('radio', { name: /Imperial/ }));
+      expect(screen.getByRole('textbox', { name: 'Height (feet)' })).toHaveValue('5');
+      expect(screen.getByRole('textbox', { name: 'Height (inches)' })).toHaveValue('10.1');
+      expect(screen.getByRole('textbox', { name: 'Weight' })).toHaveValue('176.4');
+      await user.click(screen.getByRole('radio', { name: /Metric/ }));
+    }
+    // Without the fix this read 178.1 cm (rounding through 5 ft 10.1 in).
+    expect(screen.getByRole('textbox', { name: 'Height' })).toHaveValue('178');
+    expect(screen.getByRole('textbox', { name: 'Weight' })).toHaveValue('80');
+  });
 });

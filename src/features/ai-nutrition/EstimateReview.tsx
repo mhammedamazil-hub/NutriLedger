@@ -14,6 +14,8 @@ import { roundTo } from '../../lib/formatting/numbers';
 import type { NutritionEstimate } from '../../lib/ai/schemas';
 import { parseFoodForm, type FoodFormValues } from '../food-diary/foodForm';
 import styles from './Ai.module.css';
+import { saveErrorMessage } from '../../lib/database/errors';
+import { useUnsavedChanges } from '../../hooks/useUnsavedChanges';
 
 const s = (n: number | null) => (n === null ? '' : String(roundTo(n, 1)));
 
@@ -47,7 +49,10 @@ export function EstimateReview({ estimate, onDiscard }: { estimate: NutritionEst
   const [values, setValues] = useState(() => initialValues(estimate, today));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState<{ date: string; name: string } | null>(null);
+  // An estimate waiting for review counts as unsaved work (protects it from update reloads / tab close).
+  useUnsavedChanges(saved === null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const busy = useRef(false);
 
   if (estimate.status === 'needs_clarification') {
@@ -91,12 +96,13 @@ export function EstimateReview({ estimate, onDiscard }: { estimate: NutritionEst
     if (!r.ok) return setErrors(r.errors);
     busy.current = true;
     setSaving(true);
+    setSaveError(null);
     try {
       await store.addFoodEntry({ ...r.value, source: 'ai-estimate' });
       setSaved({ date: r.value.date, name: r.value.name });
       toast.show(`Saved “${r.value.name}” to ${mealLabel(r.value.meal)}.`);
-    } catch {
-      setErrors({ name: 'Could not save to this device. Try again.' });
+    } catch (err) {
+      setSaveError(saveErrorMessage(err, 'The entry could not be saved to this device. Your edits are still here — try again.'));
     } finally {
       busy.current = false;
       setSaving(false);
@@ -161,6 +167,11 @@ export function EstimateReview({ estimate, onDiscard }: { estimate: NutritionEst
         </SelectField>
       </div>
       <TextAreaField label="Notes" optional rows={2} value={values.notes} onChange={set('notes')} error={errors.notes} maxLength={1000} />
+      {saveError && (
+        <Notice tone="danger" title="Not saved" role="alert">
+          {saveError}
+        </Notice>
+      )}
       <div className="row" style={{ gap: 'var(--space-2)', flexWrap: 'wrap' }}>
         <Button type="submit" variant="primary" loading={saving}>
           Save to diary

@@ -29,7 +29,7 @@ export function ChartFrame<T>({ summary, label, height, children, legend, rows, 
       <figcaption className={styles.summary}>{summary}</figcaption>
       {legend && <div className={styles.legend}>{legend}</div>}
       <ErrorBoundary label={label}>
-        <div className={styles.chart} style={{ height }} aria-hidden="true">
+        <div className={styles.chart} style={{ height }} aria-hidden="true" inert>
           <Suspense fallback={null}>{children}</Suspense>
         </div>
       </ErrorBoundary>

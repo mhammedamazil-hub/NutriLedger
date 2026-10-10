@@ -28,7 +28,7 @@ export function WeightSnapshot() {
       title="Latest weight"
       titleId="weight-title"
       actions={
-        <Link to="/progress" className="small" style={{ fontWeight: 600 }}>
+        <Link to="/progress" className="small tap-link">
           Progress
         </Link>
       }

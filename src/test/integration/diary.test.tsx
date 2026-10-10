@@ -49,7 +49,7 @@ describe('food diary', () => {
     // Delete + undo
     await user.click(within(screen.getByRole('region', { name: /Lunch/ })).getByRole('button', { name: 'Delete Greek yogurt' }));
     expect(await screen.findByText('Nothing logged for this day')).toBeInTheDocument();
-    await user.click(await screen.findByRole('button', { name: 'Undo' }));
+    await user.click(await screen.findByRole('button', { name: 'Undo: Deleted “Greek yogurt”.' }));
     expect(await screen.findByText('Greek yogurt')).toBeInTheDocument();
     const stored = (await repo.loadAll()).snapshot.foodEntries;
     expect(stored).toHaveLength(1);

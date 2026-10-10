@@ -40,7 +40,9 @@ export function IntakePanel({ totals, targets, today }: { totals: NutritionTotal
           ) : (
             <>
               <span className="muted">No daily target set</span>
-              <Link to="/settings#targets">Set a target</Link>
+              <Link to="/settings#targets" className="tap-link">
+                Set a target
+              </Link>
             </>
           )}
         </div>
