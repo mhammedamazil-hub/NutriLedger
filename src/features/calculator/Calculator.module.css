@@ -1,0 +1,1487 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Energy calculator: a bespoke, editorial "instrument" layout.
+
+   Rules this file follows:
+   • 8-point grid. Every margin, padding and gap is a multiple of 8px, taken
+     from the --s* scale below. (Hairline borders and type line-heights, which
+     sit on a 4px baseline, are not spacing.)
+   • Neutral structure. Off-white, charcoal and greys derived from the theme
+     text/background colours, so dark mode adapts automatically.
+   • One accent. --c-accent appears only on the Calculate button and the TDEE
+     callout (headline figure + its marker on the range scale).
+   • No gradients. Texture (hatching) and value (ink vs grey) carry meaning.
+   • Typography. Newsreader (optical-size axis) for display and numerals,
+     Public Sans for 18/28 body text.
+   ────────────────────────────────────────────────────────────────────────── */
+
+.page {
+  container: calculator / inline-size;
+
+  /* 8-point spacing scale */
+  --s1: 0.5rem; /* 8 */
+  --s2: 1rem; /* 16 */
+  --s3: 1.5rem; /* 24 */
+  --s4: 2rem; /* 32 */
+  --s5: 2.5rem; /* 40 */
+  --s6: 3rem; /* 48 */
+  --s7: 3.5rem; /* 56 */
+  --s8: 4rem; /* 64 */
+  --s10: 5rem; /* 80 */
+  --s12: 6rem; /* 96 */
+
+  /* Re-map shared tokens so shared components (Button, focus ring) inherit the grid */
+  --space-1: var(--s1);
+  --space-2: var(--s1);
+  --space-3: var(--s2);
+  --space-4: var(--s2);
+  --space-5: var(--s3);
+  --space-6: var(--s4);
+  --space-7: var(--s6);
+  --tap: var(--s6);
+  --radius-md: var(--s1);
+  --text-xs: 0.875rem;
+  --text-sm: 1rem;
+  --text-md: 1.125rem;
+
+  /* Neutral structure */
+  --ink: var(--c-text);
+  --ink-2: color-mix(in srgb, var(--c-text) 70%, var(--c-bg)); /* 5.5:1 light, 7.8:1 dark (≥ 5.1:1 on --wash) */
+  --line: color-mix(in srgb, var(--c-text) 12%, transparent);
+  --line-strong: color-mix(in srgb, var(--c-text) 30%, transparent);
+  --wash: color-mix(in srgb, var(--c-text) 4%, var(--c-bg));
+  --c-primary: var(--c-text);
+  --c-primary-strong: color-mix(in srgb, var(--c-text) 84%, var(--c-bg));
+  --c-primary-soft: var(--wash);
+  --c-on-primary: var(--c-bg);
+  --c-focus: var(--c-text);
+  --c-surface-2: color-mix(in srgb, var(--c-text) 7%, var(--c-bg));
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-slow: 320ms;
+  --dur-reveal: 720ms;
+
+  color: var(--ink);
+  font-size: 1.125rem; /* 18px body */
+  line-height: 1.75rem; /* 28px */
+  letter-spacing: -0.003em;
+  font-variant-numeric: lining-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page {
+    --dur-slow: 0ms;
+    --dur-reveal: 0ms;
+  }
+}
+
+/* ── Type primitives ─────────────────────────────────────────────────────── */
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.display {
+  max-width: 11ch;
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-weight: 460;
+  font-size: clamp(2.5rem, 1rem + 9cqi, 5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.display:focus {
+  outline: none;
+}
+
+.helper {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.fineprint {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+/* ── Page header: title left, intro offset right ─────────────────────────── */
+
+.header {
+  display: grid;
+  gap: var(--s3);
+  padding-block: var(--s2) var(--s8);
+}
+
+.headerTitle {
+  display: grid;
+  gap: var(--s2);
+}
+
+.headerAside {
+  max-width: 34ch;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  color: var(--ink-2);
+}
+
+/* ── Body grid ───────────────────────────────────────────────────────────── */
+
+.body {
+  display: grid;
+  gap: var(--s8);
+  align-items: start;
+}
+
+.form {
+  min-width: 0;
+}
+
+.readoutCol {
+  container: readout / inline-size;
+  min-width: 0;
+  padding-top: var(--s3);
+  border-top: 2px solid var(--ink);
+}
+
+@container calculator (min-width: 60rem) {
+  .header,
+  .body {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--s3);
+  }
+
+  .header {
+    align-items: end;
+    padding-block: var(--s4) var(--s10);
+  }
+
+  .headerTitle {
+    grid-column: 1 / span 7;
+  }
+
+  .headerAside {
+    grid-column: 8 / span 5;
+    padding-left: var(--s4);
+  }
+
+  .form {
+    grid-column: 1 / span 7;
+  }
+
+  /* Column 8 starts a quiet rule; the readout breathes inside 5 columns. */
+  .readoutCol {
+    grid-column: 8 / span 5;
+    align-self: stretch;
+    padding-top: 0;
+    padding-left: var(--s4);
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .readout[data-state='empty'] {
+    position: sticky;
+    top: var(--s3);
+  }
+}
+
+/* ── Form sections with hanging index ────────────────────────────────────── */
+
+.section {
+  display: grid;
+  gap: var(--s3);
+  padding-block: var(--s3) var(--s6);
+  border-top: 1px solid var(--line-strong);
+}
+
+.sectionIndex {
+  font-family: var(--font-serif);
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+  font-weight: 400;
+  color: var(--ink-2);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.sectionHead {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-size: 2rem;
+  line-height: 2.5rem;
+  font-weight: 480;
+  letter-spacing: -0.015em;
+}
+
+.sectionLede {
+  max-width: 56ch;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  color: var(--ink-2);
+}
+
+.sectionBody {
+  display: grid;
+  gap: var(--s4);
+  min-width: 0;
+}
+
+@container calculator (min-width: 40rem) {
+  .section {
+    grid-template-columns: var(--s8) minmax(0, 1fr);
+    column-gap: var(--s3);
+  }
+
+  .sectionIndex {
+    grid-row: 1 / span 2;
+    font-size: 2rem;
+    line-height: 2.5rem;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+  }
+
+  .sectionHead,
+  .sectionBody {
+    grid-column: 2;
+  }
+}
+
+/* ── Measure fields ──────────────────────────────────────────────────────── */
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: var(--s3);
+}
+
+.heightPair {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: var(--s1) var(--s3);
+}
+
+.fieldRow > *,
+.heightPair > * {
+  min-width: 0;
+}
+
+.heightPair > .fieldError {
+  grid-column: 1 / -1;
+}
+
+.field {
+  display: grid;
+  align-content: start;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.fieldLabel {
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.fieldOptional {
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.fieldWell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: var(--s7);
+  border-radius: var(--s1);
+  background: var(--wash);
+  box-shadow: inset 0 -1px 0 var(--line-strong);
+  transition:
+    background-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.fieldWell:hover {
+  box-shadow: inset 0 -1px 0 var(--ink);
+}
+
+.fieldWell:focus-within {
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+
+.fieldWell[data-invalid] {
+  box-shadow: inset 0 -2px 0 var(--c-danger);
+}
+
+.fieldWell[data-invalid]:focus-within {
+  box-shadow: inset 0 0 0 2px var(--c-danger);
+}
+
+.fieldInput {
+  flex: 1 1 auto;
+  width: 100%; /* override the size-based intrinsic width of native inputs */
+  min-width: 0;
+  height: var(--s7);
+  padding: 0 var(--s2);
+  border: 0;
+  border-radius: var(--s1);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.125rem;
+}
+
+/* The well draws the (2px, high-contrast) focus indicator. */
+.fieldInput:focus-visible {
+  outline: none;
+}
+
+.fieldNumeric {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-size: 1.5rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.fieldUnit {
+  flex: none;
+  padding-right: var(--s2);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.fieldTextarea {
+  height: auto;
+  min-height: var(--s12);
+  padding: var(--s1) var(--s2);
+  line-height: 1.75rem;
+  resize: vertical;
+}
+
+.fieldHint {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.fieldError {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: var(--c-danger);
+}
+
+/* ── Toggle: native radios on a track with a sliding thumb ───────────────── */
+
+.toggle {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.toggle > legend {
+  float: left;
+  width: 100%;
+}
+
+.toggleTrack {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  max-width: 30rem;
+  border-radius: var(--s1);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.toggleTrack[data-invalid] {
+  box-shadow: inset 0 0 0 2px var(--c-danger);
+}
+
+.toggleThumb {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: calc(100% / var(--n));
+  border-radius: var(--s1);
+  background: var(--ink);
+  opacity: 0;
+  transform: translateX(calc(100% * var(--i)));
+  transition:
+    transform var(--dur-slow) var(--ease-out),
+    opacity var(--dur) var(--ease);
+}
+
+.toggleThumb[data-visible] {
+  opacity: 1;
+}
+
+.toggleOption {
+  position: relative;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  min-height: var(--s6);
+  padding: 0 var(--s2);
+  border-radius: var(--s1);
+  color: var(--ink-2);
+  text-align: center;
+  cursor: pointer;
+  transition: color var(--dur) var(--ease);
+}
+
+.toggleOption:has(.toggleDetail) {
+  min-height: var(--s7);
+}
+
+.toggleOption:hover {
+  color: var(--ink);
+}
+
+.toggleOption[data-checked] {
+  color: var(--c-bg);
+}
+
+.toggleOption input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggleOption:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.toggleLabel,
+.toggleDetail {
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.toggleOption:active .toggleLabel,
+.toggleOption:active .toggleDetail {
+  transform: scale(0.96);
+}
+
+.toggleLabel {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+.toggleDetail {
+  font-size: 0.8125rem;
+  line-height: 1rem;
+}
+
+/* ── Activity: typographic list with intensity glyphs ────────────────────── */
+
+.activity {
+  display: grid;
+  gap: var(--s3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.activityList {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+
+.activityList[data-invalid] {
+  border-top: 2px solid var(--c-danger);
+}
+
+.activityRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--s3) minmax(0, 1fr) auto;
+  column-gap: var(--s2);
+  align-items: start;
+  padding: var(--s2);
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background-color var(--dur) var(--ease);
+}
+
+.activityRow::before {
+  content: '';
+  position: absolute;
+  inset: -1px auto -1px 0;
+  width: 2px;
+  background: var(--ink);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.activityRow:hover,
+.activityRow:has(input:checked) {
+  background: var(--wash);
+}
+
+.activityRow:has(input:checked)::before {
+  transform: scaleY(1);
+}
+
+.activityRow:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.activityRow:active .activityText {
+  transform: translateX(2px);
+}
+
+.activityRow input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.activityMark {
+  display: grid;
+  place-items: center;
+  width: var(--s3);
+  height: var(--s3);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
+  transition: box-shadow var(--dur) var(--ease);
+}
+
+.activityMark::after {
+  content: '';
+  width: var(--s1);
+  height: var(--s1);
+  border-radius: 50%;
+  background: var(--c-bg);
+  transform: scale(0);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.activityRow input:checked ~ .activityMark {
+  box-shadow: inset 0 0 0 12px var(--ink);
+}
+
+.activityRow input:checked ~ .activityMark::after {
+  transform: scale(1);
+}
+
+.activityText {
+  display: grid;
+  min-width: 0;
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.activityTitle {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+.activityDesc {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.activityMeta {
+  display: grid;
+  justify-items: end;
+  gap: var(--s1);
+}
+
+.activityMult {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 1.5rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.intensity {
+  width: var(--s5);
+  height: var(--s3);
+}
+
+.intensityOn {
+  fill: var(--ink-2);
+  transition: fill var(--dur) var(--ease);
+}
+
+.intensityOff {
+  fill: var(--line);
+}
+
+.activityRow:has(input:checked) .intensityOn {
+  fill: var(--ink);
+}
+
+/* ── Disclosure (details) with a CSS-drawn chevron ───────────────────────── */
+
+.disclosure {
+  border-block: 1px solid var(--line);
+}
+
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  min-height: var(--s7);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::after {
+  content: '';
+  flex: none;
+  width: var(--s1);
+  height: var(--s1);
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.disclosure[open] > summary::after {
+  transform: rotate(225deg);
+}
+
+.disclosure > summary:hover {
+  color: var(--ink-2);
+}
+
+.disclosureBody {
+  display: grid;
+  gap: var(--s3);
+  padding-bottom: var(--s3);
+}
+
+/* ── Commit row: the one accent call to action ───────────────────────────── */
+
+.commit {
+  display: grid;
+  gap: var(--s3);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line-strong);
+}
+
+@container calculator (min-width: 40rem) {
+  .commit {
+    padding-left: calc(var(--s8) + var(--s3));
+  }
+}
+
+.commitRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+}
+
+.commitRow .helper {
+  max-width: 28ch;
+}
+
+.page .calculate {
+  min-width: calc(var(--s8) * 3);
+  min-height: var(--s8);
+  padding: 0 var(--s4);
+  gap: var(--s2);
+  justify-content: space-between;
+  border-radius: var(--s1);
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.page .calculate:hover:not(:disabled) {
+  background: var(--c-accent-strong);
+}
+
+.page .calculate:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.page .calculate:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+.page .arrowGlyph {
+  width: var(--s3);
+  height: var(--s2);
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+.page .calculate:hover .arrowGlyph {
+  transform: translateX(4px);
+}
+
+.dirtyRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s1) var(--s2);
+}
+
+.callout {
+  display: grid;
+  gap: var(--s1);
+  margin: 0;
+  padding: var(--s2) var(--s3);
+  border-left: 2px solid var(--ink);
+  background: var(--wash);
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.callout[data-tone='danger'] {
+  border-left-color: var(--c-danger);
+}
+
+.calloutTitle {
+  font-weight: 650;
+}
+
+/* ── Readout ─────────────────────────────────────────────────────────────── */
+
+.readout {
+  display: grid;
+  align-content: start;
+  gap: var(--s4);
+  min-width: 0;
+}
+
+.readout[data-state='ready'] {
+  animation: readoutIn var(--dur-reveal) var(--ease-out);
+}
+
+@keyframes readoutIn {
+  from {
+    opacity: 0;
+    transform: translateY(var(--s1));
+  }
+}
+
+.readoutHead {
+  display: grid;
+}
+
+/* "Calculate" scrolls here; keep the heading clear of the fixed mobile top bar. */
+.readoutHead > h2 {
+  scroll-margin-top: calc(var(--topbar-height) + var(--safe-top) + var(--s3));
+}
+
+.readoutFor {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.hero {
+  display: grid;
+}
+
+.heroLabel {
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.heroValue {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-weight: 420;
+  font-size: clamp(3.5rem, 28cqi, 6rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--c-accent);
+}
+
+.heroGhost {
+  color: var(--line-strong);
+}
+
+.heroUnit {
+  padding-top: var(--s1);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.emptyCopy {
+  display: grid;
+  gap: var(--s1);
+}
+
+.emptyTitle {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 480;
+}
+
+.emptyCopy .helper {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+/* Charts */
+
+.chart {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  min-width: 0;
+}
+
+.chartCaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--s2);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line);
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chartCaptionNote {
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+}
+
+.chartNote {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.rangePlot {
+  position: relative;
+  padding-bottom: var(--s3);
+}
+
+.rangeSvg {
+  width: 100%;
+  height: var(--s4);
+  overflow: visible;
+}
+
+.axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.rangeBand {
+  fill: color-mix(in srgb, var(--c-text) 14%, transparent);
+}
+
+.rangeMarker {
+  stroke: var(--c-accent);
+  stroke-width: 3;
+}
+
+.targetMarker {
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.targetKey {
+  display: inline-block;
+  width: var(--s2);
+  border-top: 2px dashed var(--ink);
+}
+
+.rangeTick {
+  position: absolute;
+  top: var(--s4);
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.compPlot {
+  min-width: 0;
+}
+
+.compSvg {
+  width: 100%;
+  height: var(--s3);
+}
+
+.hatchBg {
+  fill: var(--c-bg);
+}
+
+.hatchLine {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-opacity: 0.6;
+}
+
+.compRest {
+  fill: var(--ink);
+}
+
+.grow {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-out);
+  animation: growX var(--dur-reveal) var(--ease-out);
+}
+
+@keyframes growX {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.compLegend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s1) var(--s3);
+  margin: 0;
+}
+
+.compLegend dt {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.compLegend dd {
+  margin: 0;
+}
+
+.legendValue {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.key {
+  display: inline-block;
+  flex: none;
+  width: var(--s2);
+  height: var(--s2);
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.keyRest {
+  background: var(--ink);
+}
+
+.keyActivity {
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.keyActivity svg {
+  width: 100%;
+  height: 100%;
+}
+
+.spectrum {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: end;
+  gap: var(--s1);
+}
+
+.spectrumCol {
+  display: grid;
+  justify-items: center;
+  gap: var(--s1);
+  min-width: 0;
+  text-align: center;
+}
+
+.spectrumValue {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.spectrumCol[data-current] .spectrumValue {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.spectrumSvg {
+  width: 100%;
+  height: var(--s12);
+}
+
+.spectrumBar {
+  fill: color-mix(in srgb, var(--c-text) 20%, transparent);
+  transition: fill var(--dur) var(--ease);
+}
+
+.spectrumCol[data-current] .spectrumBar {
+  fill: var(--ink);
+}
+
+.growY {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transition: transform var(--dur-slow) var(--ease-out);
+  animation: growY var(--dur-reveal) var(--ease-out);
+}
+
+@keyframes growY {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.spectrumMult {
+  width: 100%;
+  padding-top: var(--s1);
+  border-top: 1px solid var(--line-strong);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.spectrumEnds {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.ghost {
+  display: grid;
+  gap: var(--s4);
+}
+
+.ghostStroke {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+/* Secondary metrics */
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--s3);
+  margin: 0;
+  padding-top: var(--s2);
+  border-top: 1px solid var(--line);
+}
+
+.metrics dt {
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.metrics dd {
+  display: grid;
+  margin: 0;
+}
+
+.metricValue {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  line-height: 2.5rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.metricNote {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.readoutBlock {
+  display: grid;
+  gap: var(--s1);
+}
+
+.saveBlock {
+  display: grid;
+  gap: var(--s3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--s3) 0 0;
+  border: 0;
+  box-shadow: inset 0 1px 0 var(--line-strong);
+}
+
+.saveBlock > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+}
+
+.blockTitle {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 480;
+}
+
+/* Arithmetic */
+
+.formulaList {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+}
+
+.formulaList dt {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  font-weight: 650;
+}
+
+.formulaList dd {
+  margin: 0;
+}
+
+.formula {
+  display: block;
+  padding: var(--s1) var(--s2);
+  border-radius: var(--s1);
+  background: var(--wash);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  overflow-wrap: anywhere;
+}
+
+/* ── History ledger: title left, records right ───────────────────────────── */
+
+.ledger {
+  display: grid;
+  gap: var(--s4);
+  margin-top: var(--s10);
+  padding-top: var(--s3);
+  border-top: 2px solid var(--ink);
+}
+
+.ledgerHead {
+  display: grid;
+  align-content: start;
+  gap: var(--s1);
+}
+
+.ledgerTitle {
+  font-family: var(--font-serif);
+  font-optical-sizing: auto;
+  font-size: 2rem;
+  line-height: 2.5rem;
+  font-weight: 480;
+  letter-spacing: -0.015em;
+}
+
+.ledgerList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.ledgerRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    'date del'
+    'tdee bmr'
+    'detail detail';
+  align-items: start;
+  gap: var(--s1) var(--s3);
+  padding-block: var(--s3);
+  border-bottom: 1px solid var(--line);
+}
+
+.ledgerRow > :nth-child(1) {
+  grid-area: date;
+}
+.ledgerRow > :nth-child(2) {
+  grid-area: tdee;
+}
+.ledgerRow > :nth-child(3) {
+  grid-area: bmr;
+}
+.ledgerRow > :nth-child(4) {
+  grid-area: detail;
+}
+.ledgerRow > :nth-child(5) {
+  grid-area: del;
+}
+
+.ledgerDate {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 2rem;
+  font-weight: 500;
+}
+
+.ledgerFigure {
+  display: grid;
+}
+
+.ledgerNum {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.ledgerUnit {
+  font-size: 0.8125rem;
+  line-height: 1.5rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.ledgerDetail {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--ink-2);
+}
+
+.ledgerMath > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--s6);
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 4px;
+}
+
+.ledgerMath[open] > summary {
+  margin-bottom: var(--s1);
+}
+
+.page .ledgerDelete {
+  justify-self: end;
+  color: var(--ink-2);
+}
+
+.page .ledgerDelete:hover:not(:disabled) {
+  color: var(--c-danger);
+}
+
+.ledgerEmpty {
+  display: grid;
+  gap: var(--s1);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--line);
+}
+
+@container calculator (min-width: 40rem) {
+  .ledgerRow {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'date tdee bmr del'
+      '. detail detail detail';
+  }
+}
+
+@container calculator (min-width: 60rem) {
+  .ledger {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--s3);
+  }
+
+  .ledgerHead {
+    grid-column: 1 / span 4;
+  }
+
+  .ledgerList,
+  .ledgerEmpty {
+    grid-column: 5 / span 8;
+  }
+}
+
+/* ── Windows High Contrast / forced colours ──────────────────────────────
+   Forced-colour modes drop box-shadows and override backgrounds, which is
+   how the custom controls above draw selection and focus. Re-express those
+   states with borders, outlines and system colours. */
+@media (forced-colors: active) {
+  .fieldWell {
+    border: 1px solid CanvasText;
+  }
+
+  .fieldWell:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .toggleTrack {
+    border: 1px solid CanvasText;
+  }
+
+  .toggleThumb {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .toggleOption[data-checked] {
+    forced-color-adjust: none;
+    color: HighlightText;
+  }
+
+  .activityMark {
+    border: 1px solid CanvasText;
+  }
+
+  .activityRow input:checked ~ .activityMark {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+  }
+
+  .activityRow:has(input:checked) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .activityRow::before {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .callout {
+    border: 1px solid CanvasText;
+    border-left-width: 4px;
+  }
+
+  /* SVG fills are not remapped by forced colours: map chart marks explicitly.
+     Emphasis = CanvasText (ink), context = GrayText, the hatch keeps its texture. */
+  .compRest,
+  .spectrumCol[data-current] .spectrumBar,
+  .intensityOn,
+  .activityRow:has(input:checked) .intensityOn {
+    fill: CanvasText;
+  }
+
+  .spectrumBar,
+  .rangeBand,
+  .intensityOff {
+    fill: GrayText;
+  }
+
+  .axis,
+  .rangeMarker,
+  .targetMarker,
+  .hatchLine {
+    stroke: CanvasText;
+  }
+
+  .hatchBg {
+    fill: Canvas;
+  }
+
+  .ghostStroke {
+    stroke: GrayText;
+  }
+
+  .keyRest {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .keyActivity {
+    border: 1px solid CanvasText;
+  }
+
+  .targetKey {
+    border-top-color: CanvasText;
+  }
+}

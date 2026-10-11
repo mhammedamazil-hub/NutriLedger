@@ -1,0 +1,216 @@
+.layout {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1100px) {
+  .layout {
+    grid-template-columns: 200px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.toc {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .toc {
+    display: block;
+    position: sticky;
+    top: var(--space-5);
+  }
+}
+
+.toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.toc a {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--c-text-2);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.toc a:hover {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+}
+
+.sections {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.sections > section {
+  scroll-margin-top: calc(var(--topbar-height) + var(--space-4));
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.keyRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.keyRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c-border-strong);
+  flex: none;
+}
+
+.dotOk {
+  background: var(--c-success);
+}
+
+.dotWarn {
+  background: var(--c-warning);
+}
+
+.mealList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.mealChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--c-surface);
+  font-size: var(--text-sm);
+  max-width: 100%;
+}
+
+.mealChip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inlineForm {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.inlineForm > :first-child {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.dl dt {
+  color: var(--c-text-2);
+}
+
+.dl dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.prose {
+  display: grid;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.prose ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.previewTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.previewTable th,
+.previewTable td {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.previewTable td:last-child,
+.previewTable th:last-child {
+  text-align: right;
+}
+
+.fileInput {
+  font-size: var(--text-sm);
+  max-width: 100%;
+}
+
+.fileInput::file-selector-button {
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  margin-right: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-border-strong);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sections h2 { scroll-margin-top: calc(var(--topbar-height) + var(--space-4)); }
+
+.rejectedList {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,70 @@
+.notice {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+
+.notice > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.body {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.title {
+  font-weight: 650;
+}
+
+.info {
+  background: var(--c-info-soft);
+  color: var(--c-text);
+  border-color: color-mix(in srgb, var(--c-info) 25%, transparent);
+}
+.info > svg {
+  color: var(--c-info);
+}
+
+.warning {
+  background: var(--c-warning-soft);
+  border-color: color-mix(in srgb, var(--c-warning) 25%, transparent);
+}
+.warning > svg {
+  color: var(--c-warning);
+}
+
+.danger {
+  background: var(--c-danger-soft);
+  border-color: color-mix(in srgb, var(--c-danger) 25%, transparent);
+}
+.danger > svg {
+  color: var(--c-danger);
+}
+
+.success {
+  background: var(--c-success-soft);
+  border-color: color-mix(in srgb, var(--c-success) 25%, transparent);
+}
+.success > svg {
+  color: var(--c-success);
+}
+
+.neutral {
+  background: var(--c-surface-2);
+  border-color: var(--c-border);
+}
+.neutral > svg {
+  color: var(--c-text-2);
+}

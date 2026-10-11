@@ -1,0 +1,16 @@
+node_modules
+dist
+dev-dist
+coverage
+*.local
+.env
+.env.*
+!.env.example
+.vercel
+.DS_Store
+*.log
+/test-results
+/scripts/.browser
+
+# Real-browser audit output (scripts/browser-audit.mjs)
+/audit-out

@@ -1,0 +1,80 @@
+/* Semantic colour tokens. Components only use these names, never raw hex. */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --c-bg: #f7f7f2;
+  --c-surface: #ffffff;
+  --c-surface-2: #f1f3ec;
+  --c-text: #202820;
+  --c-text-2: #59655c; /* 5.6:1 on --c-bg */
+  --c-border: #e3e7e0;
+  --c-border-strong: #c9d0c6;
+  --c-primary: #245b43;
+  --c-primary-strong: #163c2c;
+  --c-primary-soft: #eaf1eb;
+  --c-on-primary: #ffffff;
+  --c-focus: #245b43;
+  /* Single bold accent, reserved for primary calls to action and critical data callouts. */
+  --c-accent: #245b43; /* 7.4:1 on --c-bg; white text on it 7.9:1 */
+  --c-accent-strong: #163c2c;
+  --c-on-accent: #ffffff;
+
+  --c-success: #23643f;
+  --c-success-soft: #e6f2ea;
+  --c-warning: #7a4f00;
+  --c-warning-soft: #fbf2df;
+  --c-danger: #a3362a;
+  --c-danger-soft: #fbece9;
+  --c-info: #2b5675;
+  --c-info-soft: #e8f0f6;
+
+  --c-chart-cal: #245b43;
+  --c-chart-protein: #2e6a8c;
+  --c-chart-carbs: #a8741c;
+  --c-chart-fat: #8a4b78;
+  --c-chart-grid: #e3e7e0;
+  --c-chart-target: #a3362a;
+
+  --shadow-sm: 0 1px 2px rgb(32 40 32 / 0.06);
+  --shadow-md: 0 4px 16px rgb(32 40 32 / 0.08), 0 1px 3px rgb(32 40 32 / 0.06);
+  --shadow-lg: 0 18px 48px rgb(22 32 24 / 0.18);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --c-bg: #101612;
+  --c-surface: #19211b;
+  --c-surface-2: #212b24;
+  --c-text: #e5ebe4;
+  --c-text-2: #a7b2a9;
+  --c-border: #2b362e;
+  --c-border-strong: #3c4a40;
+  --c-primary: #82c7a1;
+  --c-primary-strong: #a9dcbf;
+  --c-primary-soft: #1e3227;
+  --c-on-primary: #0c1d14;
+  --c-focus: #9ad6b4;
+  --c-accent: #82c7a1; /* 9.3:1 on --c-bg; --c-on-accent on it 8.9:1 */
+  --c-accent-strong: #a9dcbf;
+  --c-on-accent: #0c1d14;
+
+  --c-success: #8fd1a9;
+  --c-success-soft: #19301f;
+  --c-warning: #e9c27a;
+  --c-warning-soft: #2f2716;
+  --c-danger: #f0a296;
+  --c-danger-soft: #361d19;
+  --c-info: #9cc5e3;
+  --c-info-soft: #18283a;
+
+  --c-chart-cal: #82c7a1;
+  --c-chart-protein: #7fb7d9;
+  --c-chart-carbs: #dcb36a;
+  --c-chart-fat: #cf96c0;
+  --c-chart-grid: #2b362e;
+  --c-chart-target: #f0a296;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 0.35);
+  --shadow-lg: 0 18px 48px rgb(0 0 0 / 0.5);
+}

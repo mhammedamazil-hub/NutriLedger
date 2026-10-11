@@ -1,0 +1,47 @@
+.empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px dashed var(--c-border-strong);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--c-surface) 60%, transparent);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+}
+
+.icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.title {
+  font-weight: 650;
+  font-size: var(--text-md);
+}
+
+.text {
+  color: var(--c-text-2);
+  font-size: var(--text-sm);
+  max-width: 52ch;
+}
+
+.compact {
+  padding: var(--space-4);
+}
+
+/* Actions are standalone controls, so links get a full touch target. */
+.action a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 600;
+}
