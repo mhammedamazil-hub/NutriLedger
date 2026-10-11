@@ -53,7 +53,7 @@ describe('acceptance journey', () => {
     await user.click(screen.getByRole('radio', { name: 'Female' }));
     await user.type(screen.getByRole('textbox', { name: 'Height' }), '165');
     await user.click(screen.getByRole('radio', { name: /Lightly active/ }));
-    await user.click(screen.getByRole('button', { name: 'Calculate and save profile' }));
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
     // Mifflin–St Jeor female: 600 + 1031.25 − 150 − 161 = 1320.25; × 1.375 = 1815.3
     const results = await screen.findByRole('region', { name: 'Results' });
     expect(within(results).getByText('1,320')).toBeInTheDocument();

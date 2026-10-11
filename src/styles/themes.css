@@ -14,6 +14,10 @@
   --c-primary-soft: #eaf1eb;
   --c-on-primary: #ffffff;
   --c-focus: #245b43;
+  /* Single bold accent, reserved for primary calls to action and critical data callouts. */
+  --c-accent: #245b43; /* 7.4:1 on --c-bg; white text on it 7.9:1 */
+  --c-accent-strong: #163c2c;
+  --c-on-accent: #ffffff;
 
   --c-success: #23643f;
   --c-success-soft: #e6f2ea;
@@ -50,6 +54,9 @@
   --c-primary-soft: #1e3227;
   --c-on-primary: #0c1d14;
   --c-focus: #9ad6b4;
+  --c-accent: #82c7a1; /* 9.3:1 on --c-bg; --c-on-accent on it 8.9:1 */
+  --c-accent-strong: #a9dcbf;
+  --c-on-accent: #0c1d14;
 
   --c-success: #8fd1a9;
   --c-success-soft: #19301f;

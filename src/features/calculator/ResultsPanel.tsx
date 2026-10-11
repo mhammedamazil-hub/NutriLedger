@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Panel } from '../../components/common/Panel';
 import { Button } from '../../components/common/Button';
-import { Notice } from '../../components/feedback/Notice';
-import { EmptyState } from '../../components/feedback/EmptyState';
-import { TextAreaField, TextField } from '../../components/forms/Field';
 import { useToast } from '../../components/feedback/toastContext';
 import { useData, useDataStore } from '../../app/dataContext';
 import { usePreferences } from '../../app/preferences';
@@ -17,6 +13,32 @@ import type { AssessmentInputs, AssessmentResults } from '../../types/models';
 import styles from './Calculator.module.css';
 import { saveErrorMessage } from '../../lib/database/errors';
 import { validateAssessmentDate } from './calculatorForm';
+import { MeasureField, NotesField } from './CalcControls';
+import { ActivitySpectrum, EnergyComposition, GhostCharts, RangeScale } from './ReadoutCharts';
+
+/** Shared frame: the readout keeps the `results-title` landmark name in every state. */
+function Readout({ state, meta, children }: { state: 'ready' | 'empty'; meta?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className={styles.readout} aria-labelledby="results-title" data-state={state}>
+      <div className={styles.readoutHead}>
+        <h2 id="results-title" className={styles.eyebrow}>
+          Results
+        </h2>
+        {meta && <p className={styles.readoutFor}>{meta}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function GhostHero() {
+  return (
+    <div className={styles.hero} aria-hidden="true">
+      <span className={styles.heroLabel}>Estimated TDEE · kcal/day</span>
+      <span className={`${styles.heroValue} ${styles.heroGhost}`}>—</span>
+    </div>
+  );
+}
 
 const n2 = (n: number) => formatOne(n);
 
@@ -93,30 +115,41 @@ export function ResultsPanel() {
 
   if (estimate.status === 'incomplete') {
     return (
-      <Panel title="Results" titleId="results-title">
-        <EmptyState compact title="No estimate yet">
-          Fill in age, equation variant, height, weight and activity level, then choose “Calculate and save profile”.
-        </EmptyState>
-      </Panel>
+      <Readout state="empty">
+        <GhostHero />
+        <div className={styles.emptyCopy}>
+          <p className={styles.emptyTitle}>No estimate yet</p>
+          <p className={styles.helper}>
+            Fill in age, equation variant, height, weight and activity level, then choose “Calculate”. The figure and its
+            breakdown appear here, calculated on this device.
+          </p>
+        </div>
+        <GhostCharts />
+      </Readout>
     );
   }
 
   if (estimate.status === 'unavailable') {
     const minor = estimate.inputs.age < 18;
     return (
-      <Panel title="Results" titleId="results-title">
+      <Readout state="empty">
+        <GhostHero />
         {minor ? (
-          <Notice tone="info" title="Estimates are not shown for people under 18">
-            Energy needs during growth differ from adults, and the adult equations and calorie targets used here are not
-            appropriate. NutriLedger will not suggest a calorie target or deficit. For guidance, please talk with a doctor,
-            school nurse or registered dietitian. You can still use the food diary to record meals.
-          </Notice>
+          <div className={styles.callout} data-tone="info">
+            <p className={styles.calloutTitle}>Estimates are not shown for people under 18</p>
+            <p>
+              Energy needs during growth differ from adults, and the adult equations and calorie targets used here are not
+              appropriate. NutriLedger will not suggest a calorie target or deficit. For guidance, please talk with a
+              doctor, school nurse or registered dietitian. You can still use the food diary to record meals.
+            </p>
+          </div>
         ) : (
-          <Notice tone="warning" title="Estimate not available">
-            {estimate.reason}
-          </Notice>
+          <div className={styles.callout} data-tone="warning">
+            <p className={styles.calloutTitle}>Estimate not available</p>
+            <p>{estimate.reason}</p>
+          </div>
         )}
-      </Panel>
+      </Readout>
     );
   }
 
@@ -171,96 +204,105 @@ export function ResultsPanel() {
     }
   };
 
+  const showTarget = targets.calories !== null && !targetMatches ? targets.calories : null;
+  const hasMetrics = results.bodyFatPercent !== null || results.katchMcArdleBmr !== null;
+
   return (
-    <Panel
-      title="Results"
-      titleId="results-title"
-      description={`Estimates for ${inputs.age} y · ${formatWeight(inputs.weightKg, units)} · ${ACTIVITY_INFO[inputs.activity].label.toLowerCase()}.`}
+    <Readout
+      state="ready"
+      meta={`${inputs.age} y · ${formatWeight(inputs.weightKg, units)} · ${ACTIVITY_INFO[inputs.activity].label.toLowerCase()} · Mifflin–St Jeor`}
     >
-      <div className="stack">
-        <div className={styles.resultGrid}>
-          <div className={styles.result}>
-            <span className={styles.resultLabel}>BMR (Mifflin–St Jeor)</span>
-            <span className={styles.resultValue}>{formatInt(results.bmr)}</span>
-            <span className="small muted">kcal/day at rest</span>
-          </div>
-          <div className={`${styles.result} ${styles.resultPrimary}`}>
-            <span className={styles.resultLabel}>Estimated TDEE</span>
-            <span className={styles.resultValue}>{formatInt(results.tdee)}</span>
-            <span className="small muted">kcal/day incl. activity</span>
-          </div>
+      <div className={styles.hero}>
+        <span className={styles.heroLabel}>Estimated TDEE · kcal/day</span>
+        <span className={styles.heroValue}>{formatInt(results.tdee)}</span>
+        <span className={styles.heroUnit}>Total daily energy expenditure, including activity</span>
+      </div>
+
+      <RangeScale tdee={results.tdee} target={showTarget} />
+      <EnergyComposition bmr={results.bmr} tdee={results.tdee} />
+      <ActivitySpectrum bmr={results.bmr} current={inputs.activity} />
+
+      {hasMetrics && (
+        <dl className={styles.metrics}>
           {results.bodyFatPercent !== null && (
-            <div className={styles.result}>
-              <span className={styles.resultLabel}>Body fat (US Navy)</span>
-              <span className={styles.resultValue}>{formatOne(results.bodyFatPercent)}%</span>
-              <span className="small muted">
-                lean mass {formatWeight(results.leanMassKg ?? 0, units)}
-              </span>
+            <div>
+              <dt>Body fat · US Navy</dt>
+              <dd>
+                <span className={styles.metricValue}>{formatOne(results.bodyFatPercent)}%</span>
+                <span className={styles.metricNote}>lean mass {formatWeight(results.leanMassKg ?? 0, units)}</span>
+              </dd>
             </div>
           )}
           {results.katchMcArdleBmr !== null && results.katchMcArdleTdee !== null && (
-            <div className={styles.result}>
-              <span className={styles.resultLabel}>Katch–McArdle</span>
-              <span className={styles.resultValue}>{formatInt(results.katchMcArdleBmr)}</span>
-              <span className="small muted">BMR · TDEE {formatInt(results.katchMcArdleTdee)}</span>
+            <div>
+              <dt>BMR · Katch–McArdle</dt>
+              <dd>
+                <span className={styles.metricValue}>{formatInt(results.katchMcArdleBmr)}</span>
+                <span className={styles.metricNote}>TDEE {formatInt(results.katchMcArdleTdee)} kcal</span>
+              </dd>
             </div>
           )}
+        </dl>
+      )}
+
+      {bodyFatIssue && (
+        <div className={styles.callout} data-tone="warning">
+          <p className={styles.calloutTitle}>Body-fat estimate not calculated</p>
+          <p>{bodyFatIssue}</p>
         </div>
+      )}
 
-        {bodyFatIssue && (
-          <Notice tone="warning" title="Body-fat estimate not calculated">
-            {bodyFatIssue}
-          </Notice>
-        )}
+      <p className={styles.fineprint}>
+        These are population-level equations with a typical error of around ±10% for individuals. They are a starting
+        point for planning, not a medical assessment. Weight trends over several weeks are a better guide than any single
+        estimate.
+      </p>
 
-        <p className="small muted">
-          These are population-level equations with a typical error of around ±10% for individuals. They are a starting
-          point for planning, not a medical assessment. Weight trends over several weeks are a better guide than any single
-          estimate.
-        </p>
-
-        <details className={styles.details}>
-          <summary>Show the arithmetic</summary>
+      <details className={styles.disclosure}>
+        <summary>Show the arithmetic</summary>
+        <div className={styles.disclosureBody}>
           <FormulaBreakdown inputs={inputs} results={results} />
-          <p className="small muted" style={{ marginTop: 'var(--space-3)' }}>
+          <p className={styles.fineprint}>
             Calculated in metric units. <Link to="/ai?tool=explain">Ask AI to explain these numbers</Link> (optional; uses
             your Gemini key).
           </p>
-        </details>
-
-        <div className={styles.actions}>
-          {canUseAsTarget && (
-            <Button onClick={() => void applyTdeeTarget()} loading={busy === 'target'} disabled={targetMatches}>
-              {targetMatches ? 'TDEE is your daily target' : 'Use TDEE as daily calorie target'}
-            </Button>
-          )}
         </div>
-        {targets.calories !== null && !targetMatches && (
-          <p className="small muted">Your current target is {formatInt(targets.calories)} kcal. You can also edit targets in Settings.</p>
-        )}
+      </details>
 
-        <fieldset className="stack" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-          <legend style={{ fontWeight: 650, marginBottom: 'var(--space-2)', padding: 0 }}>Save to history</legend>
-          <p className="small muted">Saving creates a new record; earlier assessments are kept.</p>
-          <TextField
-            label="Assessment date"
-            type="date"
-            value={date}
-            max={today}
-            onChange={(e) => {
-              setDate(e.target.value);
-              setDateError(null);
-            }}
-            error={dateError ?? undefined}
-          />
-          <TextAreaField label="Notes" optional rows={2} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          <div>
-            <Button variant="primary" onClick={() => void saveAssessment()} loading={busy === 'save'}>
-              Save assessment
-            </Button>
-          </div>
-        </fieldset>
-      </div>
-    </Panel>
+      {canUseAsTarget && (
+        <div className={styles.readoutBlock}>
+          <Button onClick={() => void applyTdeeTarget()} loading={busy === 'target'} disabled={targetMatches} block>
+            {targetMatches ? 'TDEE is your daily target' : 'Use TDEE as daily calorie target'}
+          </Button>
+          <p className={styles.fineprint}>
+            {showTarget !== null ? `Your current target is ${formatInt(showTarget)} kcal. ` : ''}You can also edit targets in
+            Settings.
+          </p>
+        </div>
+      )}
+
+      <fieldset className={styles.saveBlock}>
+        <legend className={styles.blockTitle}>Save to history</legend>
+        <p className={styles.fineprint}>Saving creates a new record; earlier assessments are kept.</p>
+        <MeasureField
+          label="Assessment date"
+          type="date"
+          plain
+          value={date}
+          max={today}
+          onChange={(e) => {
+            setDate(e.target.value);
+            setDateError(null);
+          }}
+          error={dateError ?? undefined}
+        />
+        <NotesField label="Notes" optional rows={2} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <div>
+          <Button variant="primary" onClick={() => void saveAssessment()} loading={busy === 'save'}>
+            Save assessment
+          </Button>
+        </div>
+      </fieldset>
+    </Readout>
   );
 }

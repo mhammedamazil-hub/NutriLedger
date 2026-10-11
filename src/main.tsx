@@ -2,7 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import '@fontsource-variable/public-sans';
-import '@fontsource-variable/newsreader';
+// Weight + optical-size axes: large headings and numerals get Newsreader's high-contrast display cut.
+import '@fontsource-variable/newsreader/opsz.css';
 import './styles/tokens.css';
 import './styles/themes.css';
 import './styles/global.css';

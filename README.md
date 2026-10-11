@@ -33,7 +33,7 @@ NutriLedger is a private nutrition diary and energy calculator that runs in your
 | --- | --- |
 | **Dashboard** | Today's calories and macros. Shows a target and what remains **only if you set or accepted one**, plus a per-meal breakdown and recent entries. Also shows BMR, TDEE and energy balance (intake − TDEE, labelled as an estimate) and a 7-day intake chart where unlogged days stay empty instead of counting as zero. Covers every state: new user, incomplete profile, nothing logged today, offline, no AI key, and storage unavailable. |
 | **Food Diary** | Add, edit, duplicate, delete and move entries between dates and meals. **Duplicate** opens a pre-filled new entry for the day you're viewing; you can change anything (including date and meal) before saving, and the original is untouched. Meals are Breakfast, Lunch, Dinner, Snacks, Other, plus your own custom meals. Each entry has name, quantity, unit, calories, protein, carbs, fat, optional fiber and notes. Its source is shown as manual, nutrition label, or AI estimate. Includes "Save and add another", undo for single deletes and a confirmation for bulk deletes. A nutrition-label calculator scales label values to the portion you ate. There is date navigation with a Today button, meal filters and search across all entries. **A missing macro is shown as "Not recorded", never as 0.** |
-| **Calculator** | Local only. Takes age, sex, height, weight, activity level, optional neck/waist/hip, metric or imperial units, an assessment date and notes. Uses Mifflin–St Jeor BMR × activity multiplier → TDEE. Optionally estimates body fat with the US Navy method and adds a Katch–McArdle BMR. Validates fields inline with practical bounds; assessment dates must be real and not in the future. Switching units never changes what you typed: untouched fields switch back exactly (e.g. 178 cm stays 178 cm, not 178.1 cm after a round trip through 5 ft 10.1 in). Assessments are saved to a history; new ones never overwrite old ones. Under 18: no estimates or targets are shown. |
+| **Calculator** | Local only. Takes age, sex, height, weight, activity level, optional neck/waist/hip, metric or imperial units, an assessment date and notes. Uses Mifflin–St Jeor BMR × activity multiplier → TDEE. Optionally estimates body fat with the US Navy method and adds a Katch–McArdle BMR. Validates fields inline with practical bounds; assessment dates must be real and not in the future. Switching units never changes what you typed: untouched fields switch back exactly (e.g. 178 cm stays 178 cm, not 178.1 cm after a round trip through 5 ft 10.1 in). Assessments are saved to a history; new ones never overwrite old ones. Under 18: no estimates or targets are shown. The readout leads with the TDEE figure and explains it with three hand-built SVG charts, each with a text alternative: the ±10% likely range (with your current target marked if you have one), resting vs activity energy, and the TDEE at every activity level. |
 | **Progress** | Weight records and assessments, plus daily calorie and macro charts over 7d / 30d / 90d / 1y / all. Raw values only, with no smoothing or extrapolation. Days with nothing logged are left out of averages and charts, not counted as zero. Records can be deleted with undo, and all weights can be cleared after confirmation. Every chart has a table view. |
 | **AI Nutrition** (optional) | Estimate a meal from text or from a photo. The result is structured JSON, validated with Zod and labelled as an unverified estimate. **Nothing is saved until you review it.** Also offers meal ideas, a plain-language explanation of your calculations (the numbers are computed locally, and any unexpected numbers in the reply are flagged), a summary of a date range (you see exactly what will be sent first, and notes are never sent), and cautious general Q&A. Every tool supports cancel, has a timeout and gives specific error messages. All AI tools are disabled while offline. |
 | **Settings** | Theme (light/dark/system), units, daily targets (an empty field means no target), custom meals, the Gemini key and model, CSV/JSON export, backup import, clearing data, a storage usage readout and a button to request persistent storage. Also includes privacy information, install guidance and the app version. |
@@ -93,7 +93,7 @@ npm i --no-save sharp@0.34 && node scripts/generate-icons.mjs
 npm test
 ```
 
-Current result: **30 test files, 230 tests, all passing**.
+Current result: **30 test files, 231 tests, all passing**.
 
 | Category | Tests | Files |
 | --- | ---: | --- |
@@ -105,7 +105,7 @@ Current result: **30 test files, 230 tests, all passing**.
 | Formatting | 12 | `src/lib/formatting/*.test.ts` |
 | App state: preferences (incl. retired model migration), unsaved-changes guard, toast limits | 10 | `src/app/*.test.ts`, `src/components/feedback` |
 | PWA and deploy config: manifest fields, icons exist with correct pixel sizes, no runtime caching, prompt-based update, CSP, SPA rewrite | 5 | `src/test/pwa.test.ts` |
-| **Component/integration (whole app rendered)** | 53 | `src/test/integration/*.test.tsx` |
+| **Component/integration (whole app rendered)** | 54 | `src/test/integration/*.test.tsx` |
 
 The integration tests render the real `<App/>` with its router and providers against an in-memory repository and click through it with `user-event`. They cover:
 
@@ -113,7 +113,7 @@ The integration tests render the real `<App/>` with its router and providers aga
 - new-user empty states
 - diary CRUD with undo, plus validation
 - dashboard and diary totals staying consistent
-- calculator results, imperial input, the under-18 rule and assessment history
+- calculator results, text alternatives for the readout charts, imperial input, the under-18 rule and assessment history
 - targets and remaining calories
 - theme and units
 - entering and removing the API key, and remembering it only after opt-in

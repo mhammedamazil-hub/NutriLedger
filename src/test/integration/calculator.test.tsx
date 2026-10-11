@@ -25,7 +25,7 @@ describe('calculator', () => {
     await screen.findByRole('heading', { level: 1, name: 'Energy calculator' });
     expect(screen.getByText('No estimate yet')).toBeInTheDocument();
     await fillProfile(user);
-    await user.click(screen.getByRole('button', { name: 'Calculate and save profile' }));
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
 
     // Mifflin–St Jeor (male): 10×80 + 6.25×178 − 5×35 + 5 = 1742.5 → 1,743 (displayed rounded)
     const results = await screen.findByRole('region', { name: 'Results' });
@@ -44,11 +44,33 @@ describe('calculator', () => {
     ).toBeInTheDocument();
   });
 
+  it('describes every readout visualisation in text (charts are not image-only)', async () => {
+    const { user } = renderApp('/calculator');
+    await screen.findByRole('heading', { level: 1, name: 'Energy calculator' });
+    // Before calculating there is no figure, only the empty-state copy.
+    expect(within(screen.getByRole('region', { name: 'Results' })).queryByRole('img')).not.toBeInTheDocument();
+    await fillProfile(user);
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
+    const results = await screen.findByRole('region', { name: 'Results' });
+    // ±10% of 2,700.875 → 2,430.8 to 2,971.0
+    expect(within(results).getByRole('img', { name: /^Likely range 2,431 to 2,971 kcal per day\.$/ })).toBeInTheDocument();
+    // BMR 1,742.5 is 64.5% of TDEE; activity allowance 958.4
+    expect(
+      within(results).getByRole('img', { name: 'Resting metabolism 1,743 kcal (65%) plus activity 958 kcal.' }),
+    ).toBeInTheDocument();
+    // Same BMR at every multiplier (1.2, 1.375, 1.55, 1.725, 1.9)
+    expect(
+      within(results).getByRole('img', {
+        name: 'Estimated TDEE at each activity level: Sedentary 2,091, Lightly active 2,396, Moderately active 2,701, Very active 3,006, Extra active 3,311 kcal per day. Yours: Moderately active.',
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('shows inline validation for missing and implausible values', async () => {
     const { user, repo } = renderApp('/calculator');
     await screen.findByRole('heading', { level: 1, name: 'Energy calculator' });
     await user.type(screen.getByRole('textbox', { name: 'Weight' }), '8000');
-    await user.click(screen.getByRole('button', { name: 'Calculate and save profile' }));
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
     expect(screen.getByText('Enter your age in years.')).toBeInTheDocument();
     expect(screen.getByText(/Weight should be between 20 and 500 kg/)).toBeInTheDocument();
     expect(screen.getByText('Choose an activity level.')).toBeInTheDocument();
@@ -59,7 +81,7 @@ describe('calculator', () => {
     const { user } = renderApp('/calculator');
     await screen.findByRole('heading', { level: 1, name: 'Energy calculator' });
     await fillProfile(user, { age: '15', weight: '55', height: '165' });
-    await user.click(screen.getByRole('button', { name: 'Calculate and save profile' }));
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
     expect(await screen.findByText('Estimates are not shown for people under 18')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Use TDEE/ })).not.toBeInTheDocument();
   });
@@ -74,7 +96,7 @@ describe('calculator', () => {
     await user.type(screen.getByRole('textbox', { name: 'Height (feet)' }), '5');
     await user.type(screen.getByRole('textbox', { name: 'Height (inches)' }), '5');
     await user.click(screen.getByRole('radio', { name: /Sedentary/ }));
-    await user.click(screen.getByRole('button', { name: 'Calculate and save profile' }));
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
     await waitFor(async () => {
       const p = (await repo.loadAll()).snapshot.profile;
       expect(p.weightKg).toBeCloseTo(68.04, 1);
@@ -87,7 +109,7 @@ describe('calculator', () => {
     const { user, repo } = renderApp('/calculator');
     await screen.findByRole('heading', { level: 1, name: 'Energy calculator' });
     await fillProfile(user);
-    await user.click(screen.getByRole('button', { name: 'Calculate and save profile' }));
+    await user.click(screen.getByRole('button', { name: 'Calculate' }));
     await screen.findByText('2,701');
     await user.click(screen.getByRole('button', { name: 'Save assessment' }));
     await user.click(await screen.findByRole('button', { name: 'Save assessment' }));
