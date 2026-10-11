@@ -66,7 +66,7 @@ export function RangeScale({ tdee, target }: { tdee: number; target: number | nu
 
 /** Where the energy goes: resting metabolism (BMR) plus the activity allowance. */
 export function EnergyComposition({ bmr, tdee }: { bmr: number; tdee: number }) {
-  const hatch = useId().replace(/:/g, '');
+  const hatch = `hatch${useId().replace(/[^\w-]/g, '')}`; // safe inside url(#…)
   const restShare = (bmr / tdee) * 100;
   const activity = tdee - bmr;
   return (

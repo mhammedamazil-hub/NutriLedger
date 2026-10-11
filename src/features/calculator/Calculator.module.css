@@ -965,6 +965,10 @@
   transform: translateX(-50%);
 }
 
+.compPlot {
+  min-width: 0;
+}
+
 .compSvg {
   width: 100%;
   height: var(--s3);
@@ -1382,5 +1386,102 @@
   .ledgerList,
   .ledgerEmpty {
     grid-column: 5 / span 8;
+  }
+}
+
+/* ── Windows High Contrast / forced colours ──────────────────────────────
+   Forced-colour modes drop box-shadows and override backgrounds, which is
+   how the custom controls above draw selection and focus. Re-express those
+   states with borders, outlines and system colours. */
+@media (forced-colors: active) {
+  .fieldWell {
+    border: 1px solid CanvasText;
+  }
+
+  .fieldWell:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .toggleTrack {
+    border: 1px solid CanvasText;
+  }
+
+  .toggleThumb {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .toggleOption[data-checked] {
+    forced-color-adjust: none;
+    color: HighlightText;
+  }
+
+  .activityMark {
+    border: 1px solid CanvasText;
+  }
+
+  .activityRow input:checked ~ .activityMark {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+  }
+
+  .activityRow:has(input:checked) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .activityRow::before {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .callout {
+    border: 1px solid CanvasText;
+    border-left-width: 4px;
+  }
+
+  /* SVG fills are not remapped by forced colours: map chart marks explicitly.
+     Emphasis = CanvasText (ink), context = GrayText, the hatch keeps its texture. */
+  .compRest,
+  .spectrumCol[data-current] .spectrumBar,
+  .intensityOn,
+  .activityRow:has(input:checked) .intensityOn {
+    fill: CanvasText;
+  }
+
+  .spectrumBar,
+  .rangeBand,
+  .intensityOff {
+    fill: GrayText;
+  }
+
+  .axis,
+  .rangeMarker,
+  .targetMarker,
+  .hatchLine {
+    stroke: CanvasText;
+  }
+
+  .hatchBg {
+    fill: Canvas;
+  }
+
+  .ghostStroke {
+    stroke: GrayText;
+  }
+
+  .keyRest {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .keyActivity {
+    border: 1px solid CanvasText;
+  }
+
+  .targetKey {
+    border-top-color: CanvasText;
   }
 }
